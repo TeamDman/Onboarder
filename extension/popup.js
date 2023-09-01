@@ -35,15 +35,25 @@ function addTextArea(videoPlayerElement) {
     // Add a change event listener to send the content to the Rust endpoint
     textArea.addEventListener('input', function() {
         console.log("[Onboarder] Notes area modified. Current value:", this.value);
+
+        // Build the note ID from the v= slug + the title of the video
+        const title = document.querySelector("#title.ytd-watch-metadata");
+        const v = new URL(window.location).searchParams.get("v");
+        const date = new Date().toISOString().split('T')[0];
+        const id = `[${date}] [youtube] [${v}] ${title.innerText}`
+
         // Create a POST request to the Rust HTTP server
-        fetch('http://127.0.0.1:3000/invoke', {
+        fetch('http://127.0.0.1:3000/set_note', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ content: this.value }),
+            body: JSON.stringify({ 
+                id: id,
+                content: this.value
+            }),
         })
-        .then(response => response.json())
+        .then(response => response.text())
         .then(data => {
             console.log('[Onboarder] Success:', data);
         })

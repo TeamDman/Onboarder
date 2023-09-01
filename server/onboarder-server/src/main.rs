@@ -17,7 +17,7 @@ struct Config {
     notes_dir: std::path::PathBuf,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 struct Note {
     id: String,
     content: String,
@@ -27,8 +27,12 @@ fn get_path_for_note_id(id: &str, notes_dir: &PathBuf, notes_map: &mut HashMap<S
     if let Some(path) = notes_map.get(id) {
         return PathBuf::from(path);
     }
-
-    let sanitized_id = id.chars().filter(|&c| c.is_alphanumeric()).collect::<String>();
+    
+    let invalid_chars: Vec<char> = vec!['<', '>', ':', '"', '/', '\\', '|', '?', '*'];
+    let sanitized_id = id.chars()
+        .map(|c| if invalid_chars.contains(&c) { '_' } else { c })
+        .collect::<String>();
+    
     let file_path = notes_dir.join(format!("{}.txt", &sanitized_id));
 
     notes_map.insert(id.to_string(), file_path.to_str().unwrap().to_string());
@@ -41,7 +45,12 @@ async fn handle(
     notes_dir: Arc<Mutex<PathBuf>>,
     notes_map: Arc<Mutex<HashMap<String, String>>>
 ) -> Result<Response<Body>, Infallible> {
-    match (req.method(), req.uri().path()) {
+    println!("{} {}", req.method(), req.uri().path());
+    let mut res = match (req.method(), req.uri().path()) {
+        (&Method::OPTIONS, _) => {
+            let res: Response<Body> = Response::new("".into());
+            Ok::<Response<Body>, Infallible>(res)
+        },
         (&Method::POST, "/set_note") => {
             let dir = notes_dir.lock().await;
             let mut map = notes_map.lock().await;
@@ -49,12 +58,15 @@ async fn handle(
             let whole_body = hyper::body::to_bytes(req.into_body()).await.unwrap();
             let note: Note = serde_json::from_slice(&whole_body).unwrap();
 
+            println!("Note: {:?}", note);
+
             let file_path = get_path_for_note_id(&note.id, &dir, &mut map);
 
-            let mut file = OpenOptions::new().create(true).write(true).open(&file_path).unwrap();
+            let mut file = OpenOptions::new().create(true).write(true).truncate(true).open(&file_path).unwrap();
             file.write_all(note.content.as_bytes()).unwrap();
 
-            Ok(Response::new("Note set".into()))
+            let res: Response<Body> = Response::new("Note set".into());
+            Ok(res)
         }
         (&Method::GET, "/get_note") => {
             // TODO: Handle GET requests
@@ -65,7 +77,12 @@ async fn handle(
             *not_found.status_mut() = StatusCode::NOT_FOUND;
             Ok(not_found)
         }
-    }
+    }?;
+    let headers = res.headers_mut();
+    headers.insert("Access-Control-Allow-Origin", "https://www.youtube.com".parse().unwrap());
+    headers.insert("Access-Control-Allow-Methods", "GET, POST, OPTIONS".parse().unwrap());
+    headers.insert("Access-Control-Allow-Headers", "Content-Type".parse().unwrap());
+    Ok(res)
 }
 
 #[tokio::main]
@@ -97,6 +114,7 @@ async fn main() {
     let addr = ([127, 0, 0, 1], 3000).into();
     let server = Server::bind(&addr).serve(make_svc);
 
+    println!("Listening on http://{}", addr);
     if let Err(e) = server.await {
         eprintln!("server error: {}", e);
     }
