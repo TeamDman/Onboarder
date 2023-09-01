@@ -10,3 +10,10 @@ Browser:
 
 File on disk:   
 ![Screenshot](media/Code_gTwEqVdpq4.png)
+
+## TODO:
+
+- Load note content on page load
+- HTTPS
+- Auth; ensure requests are from the browser and nowhere else for now
+- Anti-clobber strategy
