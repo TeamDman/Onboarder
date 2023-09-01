@@ -1,0 +1,16 @@
+# Compiled files
+/target/
+
+# These directories can contain IDE specific cache files
+.idea/
+.vscode/
+
+# Dependency directory
+**/node_modules/
+
+# Ignore .env files
+.env
+
+# Ignore OS generated files
+.DS_Store
+Thumbs.db
