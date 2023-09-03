@@ -164,7 +164,7 @@ async fn handle(
 fn load_certs(filename: &str) -> std::io::Result<Vec<rustls::Certificate>> {
     // Open certificate file.
     let certfile = std::fs::File::open(filename)
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, format!("failed to open {}: {}", filename, e)))?;
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, format!("failed to open {} (did you run gen-certs.ps1?): {}", filename, e)))?;
     let mut reader = std::io::BufReader::new(certfile);
 
     // Load and return certificate.
@@ -180,7 +180,7 @@ fn load_certs(filename: &str) -> std::io::Result<Vec<rustls::Certificate>> {
 fn load_private_key(filename: &str) -> std::io::Result<rustls::PrivateKey> {
     // Open keyfile.
     let keyfile = std::fs::File::open(filename)
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, format!("failed to open {}: {}", filename, e)))?;
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, format!("failed to open {} (did you run gen-certs.ps1?): {}", filename, e)))?;
     let mut reader = std::io::BufReader::new(keyfile);
 
     // Load and return a single private key.
