@@ -11,9 +11,11 @@ Browser:
 File on disk:   
 ![Screenshot](media/Code_gTwEqVdpq4.png)
 
+## Tools
+
+- [mkcert](https://github.com/FiloSottile/mkcert) is used to generate TLS certs
+
 ## TODO:
 
-- Load note content on page load
-- HTTPS
 - Auth; ensure requests are from the browser and nowhere else for now
 - Anti-clobber strategy
