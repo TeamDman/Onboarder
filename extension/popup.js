@@ -66,14 +66,35 @@ function addTextArea(videoPlayerElement) {
     videoPlayerElement.insertAdjacentElement('afterend', textArea);
 }
 
-console.log("[Onboarder] attaching load listener");
+async function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
 
-// Poll every 500 milliseconds until the video player element exists
-let checkExist = setInterval(function() {
-    let videoPlayerElement = document.getElementById('full-bleed-container');
-    if (videoPlayerElement) {
-        console.log("[Onboarder] video player element found");
-        clearInterval(checkExist);
-        addTextArea(videoPlayerElement);
+async function main(){ 
+    console.log("[Onboarder] waiting for server healthcheck to succeed");
+    while(true){
+        try {
+            const resp = await fetch('http://127.0.0.1:3000/healthcheck');
+            if (resp.status == 200) {
+                break;
+            }
+        } catch (ignored) {
+        }
+        console.log("[Onboarder] server healthcheck failed, retrying after 1 second");
+        await sleep(1000);
     }
-}, 500);
+    console.log("[Onboarder] server is running");
+    
+    
+    console.log("[Onboarder] waiting for video player element");
+    while (true) {
+        let videoPlayerElement = document.getElementById('full-bleed-container');
+        if (videoPlayerElement) {
+            console.log("[Onboarder] video player element found");
+            addTextArea(videoPlayerElement);
+            break;
+        }
+        await sleep(1000);
+    }
+}
+main();

@@ -51,6 +51,11 @@ async fn handle(
             let res: Response<Body> = Response::new("".into());
             Ok::<Response<Body>, Infallible>(res)
         },
+        (&Method::GET, "/healthcheck") => {
+            let mut res = Response::default();
+            *res.status_mut() = StatusCode::OK;
+            Ok(res)
+        },
         (&Method::POST, "/set_note") => {
             let dir = notes_dir.lock().await;
             let mut map = notes_map.lock().await;
