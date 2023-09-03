@@ -1,9 +1,10 @@
 GET https://127.0.0.1:3000/healthcheck
-
 ###
-
-GET https://127.0.0.1:3000/nothere
-
+GET https://127.0.0.1:3000/no_page_here
+###
+GET https://127.0.0.1:3000/get_note?id=my note id
+###
+GET https://127.0.0.1:3000/get_note?id=bad note id 😎
 ###
 
 POST https://127.0.0.1:3000/set_note

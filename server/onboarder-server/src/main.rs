@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::convert::Infallible;
 use std::fs::{create_dir_all, OpenOptions};
-use std::io::Write;
+use std::io::{Write, Read};
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -143,9 +143,32 @@ async fn handle(
             Ok(res)
         }
         (&Method::GET, "/get_note") => {
-            // TODO: Handle GET requests
-            Ok(Response::new("GET not implemented yet".into()))
-        }
+            let dir = notes_dir.lock().await;
+            let mut map = notes_map.lock().await;
+        
+            // Decode the URI component and explicitly read from the query param named "id"
+            let id = req.uri().query().unwrap().split("=").nth(1).unwrap();
+            let decoded_id = percent_encoding::percent_decode_str(id).decode_utf8_lossy();
+        
+            println!("id: {}", decoded_id);
+        
+            let file_path = get_path_for_note_id(&decoded_id, &dir, &mut map);
+            let mut content = String::new();
+        
+            if file_path.exists() {
+                let mut file = OpenOptions::new().read(true).open(&file_path).unwrap();
+                file.read_to_string(&mut content).unwrap();
+            }
+            // If file not found, content remains an empty string
+        
+            let note = Note {
+                id: decoded_id.to_string(),
+                content,
+            };
+        
+            let res: Response<Body> = Response::new(serde_json::to_string(&note).unwrap().into());
+            Ok(res)
+        },             
         _ => {
             let mut not_found = Response::default();
             *not_found.status_mut() = StatusCode::NOT_FOUND;
