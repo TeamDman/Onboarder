@@ -43,7 +43,7 @@ function addTextArea(videoPlayerElement) {
         const id = `[${date}] [youtube] [${v}] ${title.innerText}`
 
         // Create a POST request to the Rust HTTP server
-        fetch('http://127.0.0.1:3000/set_note', {
+        fetch('https://127.0.0.1:3000/set_note', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -74,7 +74,7 @@ async function main(){
     console.log("[Onboarder] waiting for server healthcheck to succeed");
     while(true){
         try {
-            const resp = await fetch('http://127.0.0.1:3000/healthcheck');
+            const resp = await fetch('https://127.0.0.1:3000/healthcheck');
             if (resp.status == 200) {
                 break;
             }

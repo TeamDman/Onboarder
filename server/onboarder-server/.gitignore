@@ -1,3 +1,9 @@
+# TLS
+localhost.crt
+localhost.key
+onboarder+1-key.pem
+onboarder+1.pem
+
 # Compiled files
 /target/
 

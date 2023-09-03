@@ -1,15 +1,12 @@
-GET http://127.0.0.1:3000/healthcheck
-
-
-###
-
-
-GET http://127.0.0.1:3000/nothere
-
+GET https://127.0.0.1:3000/healthcheck
 
 ###
 
-POST http://127.0.0.1:3000/set_note
+GET https://127.0.0.1:3000/nothere
+
+###
+
+POST https://127.0.0.1:3000/set_note
 Content-Type: application/json
 
 {
