@@ -4,6 +4,10 @@ localhost.key
 onboarder+1-key.pem
 onboarder+1.pem
 
+# Notes from testing
+notes/*
+downloads/*
+
 # Compiled files
 /target/
 
