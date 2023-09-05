@@ -17,5 +17,14 @@ File on disk:
 
 ## TODO:
 
+- youtube playlist support since page doesn't refresh
+- system tray
+- start with windows
 - Auth; ensure requests are from the browser and nowhere else for now
 - Anti-clobber strategy
+
+## Other
+
+https://www.youtube.com/watch?v=XRpHIa-2XCE
+
+- Give GUID at the top of note to enable references that aren't brittle to renames - reference by unique content?

@@ -1,3 +1,5 @@
+GET http://127.0.0.1:3001/
+###
 GET https://127.0.0.1:3000/healthcheck
 ###
 GET https://127.0.0.1:3000/no_page_here
