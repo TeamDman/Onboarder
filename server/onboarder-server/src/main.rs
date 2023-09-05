@@ -38,7 +38,7 @@ fn main() {
     if !config.downloads_dir.exists() {
         create_dir_all(&config.downloads_dir).unwrap();
     }
-    
+
     // Serve an echo service over HTTPS, with proper error handling.
     if let Err(e) = run_server(config) {
         eprintln!("FAILED: {}", e);
@@ -161,21 +161,16 @@ async fn handle(
             let whole_body = hyper::body::to_bytes(req.into_body()).await.unwrap();
             let url = String::from_utf8(whole_body.to_vec()).unwrap();
         
-            // Prepare the yt-dlp command as a string
-            let yt_dlp_command = format!(
-                "yt-dlp --cookies-from-browser edge --windows-filenames --embed-metadata {}",
-                &url
-            );
-        
-            // Prepare the entire command to open in a new Windows Terminal window
-            let full_command = format!("start wt cmd /c \"{}\"", yt_dlp_command);
-        
             let dir = &state.lock().await.config.downloads_dir;
 
             // Run the full command
-            let output = std::process::Command::new("cmd")
+            let output = std::process::Command::new("pwsh")
                 .current_dir(&dir)
-                .args(&["/c", &full_command])
+                .arg("-NoProfile")
+                .arg("-WorkingDirectory")
+                .arg("$(Get-Location)")
+                .arg("-c")
+                .arg(format!("wt pwsh.exe -NoProfile -WorkingDirectory $(Get-Location) -c 'yt-dlp --cookies-from-browser edge --windows-filenames --embed-metadata \"{}\" && Write-Host \"\"press any key to close\"\" && $Host.UI.RawUI.ReadKey(\"\"NoEcho,IncludeKeyDown\"\")'", url))
                 .output()
                 .expect("Failed to execute command");
         

@@ -138,7 +138,7 @@ async function downloadVideo() {
         headers: {
             'Content-Type': 'application/text',
         },
-        body: window.location.href + "",
+        body: window.location.href.split("&")[0],
     });
     if (resp.status == 200) {
         const fileId = await resp.text();
