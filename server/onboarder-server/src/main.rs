@@ -12,6 +12,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use structopt::StructOpt;
+use chrono::{Datelike, Utc};
 
 #[derive(StructOpt)]
 struct Config {
@@ -106,9 +107,9 @@ async fn run_server<'a>(config: Config) -> Result<(), Box<dyn std::error::Error 
 
 
 
-fn get_path_for_note_id(id: &str, notes_dir: &PathBuf, notes_map: &mut HashMap<String, String>) -> PathBuf {
+fn get_path_for_note_id(id: &str, notes_dir: &PathBuf, notes_map: &mut HashMap<String, String>) -> std::io::Result<PathBuf> {
     if let Some(path) = notes_map.get(id) {
-        return PathBuf::from(path);
+        return Ok(PathBuf::from(path));
     }
     
     let invalid_chars: Vec<char> = vec!['<', '>', ':', '"', '/', '\\', '|', '?', '*'];
@@ -116,11 +117,21 @@ fn get_path_for_note_id(id: &str, notes_dir: &PathBuf, notes_map: &mut HashMap<S
         .map(|c| if invalid_chars.contains(&c) { '_' } else { c })
         .collect::<String>();
     
-    let file_path = notes_dir.join(format!("{}.txt", &sanitized_id));
+    
+    let dated_dir = get_dated_dir(notes_dir)?;
+    let file_path = dated_dir.join(format!("{}.txt", &sanitized_id));
 
     notes_map.insert(id.to_string(), file_path.to_str().unwrap().to_string());
 
-    file_path
+    Ok(file_path)
+}
+
+
+fn get_dated_dir(parent_dir: &PathBuf) -> std::io::Result<PathBuf> {
+    let now = Utc::now();
+    let dated_dir = parent_dir.join(format!("{}/{:02}/{:02}", now.year(), now.month(), now.day()));
+    create_dir_all(&dated_dir)?;
+    Ok(dated_dir)
 }
 
 async fn handle(
@@ -148,7 +159,16 @@ async fn handle(
 
             println!("{:?}", note);
 
-            let file_path = get_path_for_note_id(&note.id, &dastate.config.notes_dir, &mut map);
+            let file_path = match get_path_for_note_id(&note.id, &dastate.config.notes_dir, &mut map) {
+                Ok(it) => it,
+                Err(err) => {
+                    eprintln!("Error getting path for note id: {}", err);
+                    return Ok(Response::builder()
+                        .status(StatusCode::INTERNAL_SERVER_ERROR)
+                        .body("Error getting path for note id".into())
+                        .unwrap());
+                }
+            };
             drop (map);
 
             let mut file = OpenOptions::new().create(true).write(true).truncate(true).open(&file_path).unwrap();
@@ -162,10 +182,20 @@ async fn handle(
             let url = String::from_utf8(whole_body.to_vec()).unwrap();
         
             let dir = &state.lock().await.config.downloads_dir;
-
+            let dated_dir = match get_dated_dir(dir) {
+                Ok(it) => it,
+                Err(err) => {
+                    eprintln!("Error getting dated dir: {}", err);
+                    return Ok(Response::builder()
+                        .status(StatusCode::INTERNAL_SERVER_ERROR)
+                        .body("Error getting dated dir".into())
+                        .unwrap());
+                }
+            };
+            
             // Run the full command
             let output = std::process::Command::new("pwsh")
-                .current_dir(&dir)
+                .current_dir(&dated_dir)
                 .arg("-NoProfile")
                 .arg("-WorkingDirectory")
                 .arg("$(Get-Location)")
@@ -198,7 +228,16 @@ async fn handle(
         
             println!("id: {}", decoded_id);
         
-            let file_path = get_path_for_note_id(&decoded_id, &dastate.config.notes_dir, &mut map);
+            let file_path = match get_path_for_note_id(&decoded_id, &dastate.config.notes_dir, &mut map) {
+                Ok(it) => it,
+                Err(err) => {
+                    eprintln!("Error getting path for note id: {}", err);
+                    return Ok(Response::builder()
+                        .status(StatusCode::INTERNAL_SERVER_ERROR)
+                        .body("Error getting path for note id".into())
+                        .unwrap());
+                }
+            };
             drop(map);
 
             let mut content = String::new();
