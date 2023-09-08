@@ -12,7 +12,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use structopt::StructOpt;
-use chrono::{Datelike, Utc};
+use chrono::{Datelike, Local};
 
 #[derive(StructOpt)]
 struct Config {
@@ -128,7 +128,7 @@ fn get_path_for_note_id(id: &str, notes_dir: &PathBuf, notes_map: &mut HashMap<S
 
 
 fn get_dated_dir(parent_dir: &PathBuf) -> std::io::Result<PathBuf> {
-    let now = Utc::now();
+    let now = Local::now();
     let dated_dir = parent_dir.join(format!("{}/{:02}/{:02}", now.year(), now.month(), now.day()));
     create_dir_all(&dated_dir)?;
     Ok(dated_dir)

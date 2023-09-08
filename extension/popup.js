@@ -46,6 +46,7 @@ function addTextArea(videoPlayerElement, initialContent) {
 
     // Style the text area
     textArea.style.width = "calc(100% - 35px)";
+    textArea.style.minHeight = "200px";
     textArea.style.padding = "10px";
     textArea.style.marginTop = "20px";
     textArea.style.marginLeft = "5px";
