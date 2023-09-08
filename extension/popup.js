@@ -201,7 +201,7 @@ function attachPauseAndPlayListeners(videoArea) {
 function save(content) {
     // Build the note ID from the v= slug + the title of the video
     const id = getNoteId();
-    console.log(`${tag} Saving video note id \`${id}\` to disk`);
+    console.log(`${tag} saving`, {id, content});
 
     // Create a POST request to the Rust HTTP server
     return fetch("https://127.0.0.1:3000/set_note", {
@@ -260,6 +260,7 @@ async function setup() {
     console.log(`${tag} setting up at url ${window.location.href}`);
     {
         console.log(`${tag} waiting for server healthcheck to succeed`);
+        let attempt = 0;
         while (true) {
             try {
                 const resp = await fetch("https://127.0.0.1:3000/healthcheck");
@@ -267,10 +268,12 @@ async function setup() {
                     break;
                 }
             } catch (ignored) {}
+            const backoff = attempt < 10 ? 50 : 1000;
             console.log(
-                `${tag} server healthcheck failed, retrying after 1 second`
+                `${tag} server healthcheck failed, retrying after ${backoff}ms`
             );
-            await sleep(1000);
+            attempt++;
+            await sleep(backoff);
         }
         console.log(`${tag} server found`);
     }
@@ -282,12 +285,17 @@ async function setup() {
         videoArea = document.getElementById("full-bleed-container");
     }
 
+    console.log(`${tag} removing old listeners`);
+    video = videoArea.querySelector("video");
+    video.removeEventListener("pause", onPause);
+    video.removeEventListener("playing", onPlaying);
+
     {
         while (true) {
             const videoId = document.querySelector("ytd-watch-metadata").getAttribute("video-id");
             const v = new URL(window.location).searchParams.get("v");
             if (videoId == v) break;
-            console.log(`${tag} video ID doesn't match URL (did we just navigate?), retrying after 50ms`);
+            console.log(`${tag} video ID doesn't match URL (did we just navigate?), waiting 50ms before continuing setup`);
             await sleep(50);
         }
     }
@@ -329,4 +337,7 @@ addEventListener("yt-navigate-finish", e =>{
     console.log(`${tag} yt-navigate-finish event fired, calling setup()`);
     setup()
 });
-
+addEventListener("beforeunload", e => {
+    console.log(`${tag} beforeunload event fired, calling onStop()`);
+    onStop();
+});
