@@ -1,4 +1,5 @@
-// Function to remove an existing element by its ID
+const onboarder_id = Math.random()
+
 function removeElementById(id) {
     let element = document.getElementById(id);
     if (element) {
@@ -28,7 +29,7 @@ function getCurrentNoteContent() {
 }
 
 // Function to add the text area and attach an event listener to it
-function addTextArea(videoPlayerElement, initialContent) {
+function addTextArea(videoArea, initialContent) {
     console.log("[Onboarder] adding content to page");
 
     // Unique ID for the text area
@@ -61,10 +62,25 @@ function addTextArea(videoPlayerElement, initialContent) {
     });
 
     // Insert the text area after the video player element
-    videoPlayerElement.insertAdjacentElement("afterend", textArea);
+    videoArea.insertAdjacentElement("afterend", textArea);
 }
 
-function addChips(videoPlayerElement) {
+async function appendContent(content) {
+    const existing = getCurrentNoteContent();
+    const next = existing + content;
+    await save(next);
+    const note = document.getElementById("custom_notes_area");
+    note.value = next;
+}
+
+function getVideoTimestamp() {
+    const video = document.getElementsByClassName("html5-main-video")[0];
+    return video.currentTime;
+}
+
+function addChips(videoArea) {
+    console.log("[Onboarder] building action chips");
+
     removeElementById("chip_container");
     const chipContainer = document.createElement("div");
     chipContainer.id = "chip_container";
@@ -77,18 +93,9 @@ function addChips(videoPlayerElement) {
             description: "Insert the current video timestamp",
             action: async function () {
                 console.log("[Onboarder] Inserting timestamp");
-                const video =
-                    document.getElementsByClassName("html5-main-video")[0];
-                const timestamp = video.currentTime;
-                const content =
-                    getCurrentNoteContent() +
-                    `\nvideo current time ${
-                        video.currentTime
-                    } at ${new Date().toISOString()}`;
-                await save(content);
-
-                const note = document.getElementById("custom_notes_area");
-                note.value = content;
+                await appendContent(
+                    `\nvideo current time ${getVideoTimestamp()} at ${new Date().toString()}`
+                );
             },
         },
         {
@@ -115,7 +122,48 @@ function addChips(videoPlayerElement) {
         chipContainer.appendChild(chip);
     });
 
-    videoPlayerElement.insertAdjacentElement("afterend", chipContainer);
+    videoArea.insertAdjacentElement("afterend", chipContainer);
+}
+
+async function onPause() {
+    if (window.onboarder_id != onboarder_id) return;
+    console.log("[Onboarder] video paused");
+    await appendContent(
+        `\nvideo paused ${getVideoTimestamp()} seconds in at ${new Date().toString()}`
+    );
+}
+
+async function onPlaying() {
+    if (window.onboarder_id != onboarder_id) return;
+    console.log("[Onboarder] video playing");
+    await appendContent(
+        `\nvideo playing from ${getVideoTimestamp()} seconds in at ${new Date().toString()}`
+    );
+}
+
+function attachPauseAndPlayListeners(videoArea) {
+    console.log("[Onboarder] attaching pause and play listeners");
+    video = videoArea.querySelector("video");
+
+    video.addEventListener("pause", onPause);
+    video.addEventListener("playing", onPlaying);
+
+    // // Save the current pause and play methods only if they haven't been saved yet
+    // video.onboarder_original_pause =
+    //     video.onboarder_original_pause || video.pause;
+    // video.onboarder_original_play =
+    //     video.onboarder_original_play || video.play;
+
+    // // Override with your own
+    // video.pause = function () {
+    //     onPause();
+    //     this.onboarder_original_pause();
+    // };
+
+    // video.play = function () {
+    //     onPlaying();
+    //     this.onboarder_original_play();
+    // };
 }
 
 function save(content) {
@@ -174,6 +222,7 @@ async function sleep(ms) {
 }
 
 async function setup() {
+    window.onboarder_id = onboarder_id;
     console.log("[Onboarder] waiting for server healthcheck to succeed");
     while (true) {
         try {
@@ -191,10 +240,8 @@ async function setup() {
 
     console.log("[Onboarder] waiting for video player element");
     while (true) {
-        let videoPlayerElement = document.getElementById(
-            "full-bleed-container"
-        );
-        if (videoPlayerElement) {
+        let videoArea = document.getElementById("full-bleed-container");
+        if (videoArea) {
             console.log("[Onboarder] video player element found");
 
             {
@@ -211,13 +258,11 @@ async function setup() {
                         content.length
                     );
                 }
-                addTextArea(videoPlayerElement, content);
+                addTextArea(videoArea, content);
             }
 
-            {
-                console.log("[Onboarder] building action chips");
-                addChips(videoPlayerElement);
-            }
+            addChips(videoArea);
+            attachPauseAndPlayListeners(videoArea);
             break;
         }
         await sleep(1000);
