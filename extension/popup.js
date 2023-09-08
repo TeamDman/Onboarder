@@ -142,7 +142,7 @@ async function downloadVideo() {
     });
     if (resp.status == 200) {
         const fileId = await resp.text();
-        const content = getCurrentNoteContent() + `\nDownloaded video, file id: ${fileId}\ end`;
+        const content = getCurrentNoteContent() + `\n${new Date().toString()} --- Download started for "${fileId}"`;
         await save(content);
         const note = document.getElementById("custom_notes_area");
         note.value = content;
