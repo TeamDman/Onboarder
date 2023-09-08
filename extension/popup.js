@@ -1,4 +1,6 @@
-const onboarder_id = Math.random()
+let onboarder_id = "not setup yet"
+let tag = `[Onboarder-${onboarder_id}]`;
+const textAreaId = "custom_notes_area";
 
 function removeElementById(id) {
     let element = document.getElementById(id);
@@ -18,9 +20,9 @@ function getLocalDate() {
 
 function getNoteId() {
     const title = document.querySelector("#title.ytd-watch-metadata");
-    const v = new URL(window.location).searchParams.get("v");
+    const videoId = document.querySelector("ytd-watch-metadata").getAttribute("video-id");
     const date = getLocalDate();
-    const id = `[${date}] [youtube] [${v}] ${title.innerText}`;
+    const id = `[${date}] [youtube] [${videoId}] ${title.innerText}`;
     return id;
 }
 
@@ -30,10 +32,7 @@ function getCurrentNoteContent() {
 
 // Function to add the text area and attach an event listener to it
 function addTextArea(videoArea, initialContent) {
-    console.log("[Onboarder] adding content to page");
-
-    // Unique ID for the text area
-    const textAreaId = "custom_notes_area";
+    console.log(`${tag} adding content to page`);
 
     // Remove the existing text area if it exists
     removeElementById(textAreaId);
@@ -67,19 +66,30 @@ function addTextArea(videoArea, initialContent) {
 
 async function appendContent(content) {
     const existing = getCurrentNoteContent();
+    if (!existing.endsWith("\n")) content = "\n" + content;
+    if (!content.endsWith("\n")) content += "\n";
     const next = existing + content;
+    console.log(`${tag} appending content`, {existing, next});
     await save(next);
     const note = document.getElementById("custom_notes_area");
     note.value = next;
 }
 
-function getVideoTimestamp() {
+function getVideoProgress() {
     const video = document.getElementsByClassName("html5-main-video")[0];
-    return video.currentTime;
+    // in seconds
+    const current = video.currentTime;
+    const duration = video.duration;
+    
+    // convert to hh:mm:ss / hh:mm:ss (%%%) format
+    const currentFormatted = new Date(current * 1000).toISOString().substr(11, 8);
+    const durationFormatted = new Date(duration * 1000).toISOString().substr(11, 8);
+    const percentage = (current / duration * 100).toFixed(2);
+    return `${currentFormatted} / ${durationFormatted} (${percentage}%)`;
 }
 
 function addChips(videoArea) {
-    console.log("[Onboarder] building action chips");
+    console.log(`${tag} building action chips`);
 
     removeElementById("chip_container");
     const chipContainer = document.createElement("div");
@@ -92,9 +102,9 @@ function addChips(videoArea) {
             text: "Timestamp",
             description: "Insert the current video timestamp",
             action: async function () {
-                console.log("[Onboarder] Inserting timestamp");
+                console.log(`${tag} Inserting timestamp`);
                 await appendContent(
-                    `\nvideo current time ${getVideoTimestamp()} at ${new Date().toString()}`
+                    `\nvideo current time ${getVideoProgress()} at ${new Date().toString()}`
                 );
             },
         },
@@ -127,22 +137,44 @@ function addChips(videoArea) {
 
 async function onPause() {
     if (window.onboarder_id != onboarder_id) return;
-    console.log("[Onboarder] video paused");
+    console.log(`${tag} video paused`, {time: getVideoProgress(), noteId: getNoteId()});
     await appendContent(
-        `\nvideo paused ${getVideoTimestamp()} seconds in at ${new Date().toString()}`
+        `${new Date().toString()} --- ${getVideoProgress()} --- paused`
     );
 }
 
 async function onPlaying() {
     if (window.onboarder_id != onboarder_id) return;
-    console.log("[Onboarder] video playing");
+    console.log(`${tag} video playing`, {time: getVideoProgress(), noteId: getNoteId()});
     await appendContent(
-        `\nvideo playing from ${getVideoTimestamp()} seconds in at ${new Date().toString()}`
+        `${new Date().toString()} --- ${getVideoProgress()} --- playing`
     );
 }
 
+async function onStart() {
+    if (window.onboarder_id != onboarder_id) return;
+    console.log(`${tag} video started`, {time: getVideoProgress(), noteId: getNoteId()});
+    await appendContent(
+        `${new Date().toString()} --- ${getVideoProgress()} --- started`
+    );
+}
+
+async function onStop() {
+    if (window.onboarder_id != onboarder_id) return;
+    console.log(`${tag} video stopped`, {time: getVideoProgress(), noteId: getNoteId()});
+    window.onboarder_id = null;
+    await appendContent(
+        `${new Date().toString()} --- ${getVideoProgress()} --- stopped`
+    );
+    const textArea = document.getElementById(textAreaId);
+    if (textArea) {
+        textArea.readOnly = true;
+        textArea.style.color = "gray";
+    }
+}
+
 function attachPauseAndPlayListeners(videoArea) {
-    console.log("[Onboarder] attaching pause and play listeners");
+    console.log(`${tag} attaching pause and play listeners`);
     video = videoArea.querySelector("video");
 
     video.addEventListener("pause", onPause);
@@ -169,7 +201,7 @@ function attachPauseAndPlayListeners(videoArea) {
 function save(content) {
     // Build the note ID from the v= slug + the title of the video
     const id = getNoteId();
-    console.log(`[Onboarder] Saving video with note id \`${id}\` to disk`);
+    console.log(`${tag} Saving video note id \`${id}\` to disk`);
 
     // Create a POST request to the Rust HTTP server
     return fetch("https://127.0.0.1:3000/set_note", {
@@ -184,15 +216,15 @@ function save(content) {
     })
         .then((response) => response.text())
         .then((data) => {
-            console.log("[Onboarder] Success:", data);
+            console.log(`${tag} Success:`, data);
         })
         .catch((error) => {
-            console.error("[Onboarder] Error:", error);
+            console.error(`${tag} Error:`, error);
         });
 }
 
 async function downloadVideo() {
-    console.log("[Onboarder] Downloading video");
+    console.log(`${tag} Downloading video`);
     const resp = await fetch("https://127.0.0.1:3000/download", {
         method: "POST",
         headers: {
@@ -222,52 +254,79 @@ async function sleep(ms) {
 }
 
 async function setup() {
+    onboarder_id = Math.random().toString(36).substring(7);
+    tag = `[Onboarder-${onboarder_id}]`;
     window.onboarder_id = onboarder_id;
-    console.log("[Onboarder] waiting for server healthcheck to succeed");
-    while (true) {
-        try {
-            const resp = await fetch("https://127.0.0.1:3000/healthcheck");
-            if (resp.status == 200) {
-                break;
-            }
-        } catch (ignored) {}
-        console.log(
-            "[Onboarder] server healthcheck failed, retrying after 1 second"
-        );
-        await sleep(1000);
-    }
-    console.log("[Onboarder] server is running");
-
-    console.log("[Onboarder] waiting for video player element");
-    while (true) {
-        let videoArea = document.getElementById("full-bleed-container");
-        if (videoArea) {
-            console.log("[Onboarder] video player element found");
-
-            {
-                console.log("[Onboarder] getting existing note content");
-                let content = "";
-                {
-                    const resp = await fetch(
-                        `https://127.0.0.1:3000/get_note?id=${getNoteId()}`
-                    );
-                    const data = await resp.json();
-                    content = data.content;
-                    console.log(
-                        "[Onboarder] existing note content length: ",
-                        content.length
-                    );
+    console.log(`${tag} setting up at url ${window.location.href}`);
+    {
+        console.log(`${tag} waiting for server healthcheck to succeed`);
+        while (true) {
+            try {
+                const resp = await fetch("https://127.0.0.1:3000/healthcheck");
+                if (resp.status == 200) {
+                    break;
                 }
-                addTextArea(videoArea, content);
-            }
-
-            addChips(videoArea);
-            attachPauseAndPlayListeners(videoArea);
-            break;
+            } catch (ignored) {}
+            console.log(
+                `${tag} server healthcheck failed, retrying after 1 second`
+            );
+            await sleep(1000);
         }
-        await sleep(1000);
+        console.log(`${tag} server found`);
     }
+
+    console.log(`${tag} waiting for video player element`);
+    let videoArea = document.getElementById("full-bleed-container");
+    while (!videoArea) {
+        await sleep(1000);
+        videoArea = document.getElementById("full-bleed-container");
+    }
+
+    {
+        while (true) {
+            const videoId = document.querySelector("ytd-watch-metadata").getAttribute("video-id");
+            const v = new URL(window.location).searchParams.get("v");
+            if (videoId == v) break;
+            console.log(`${tag} video ID doesn't match URL (did we just navigate?), retrying after 50ms`);
+            await sleep(50);
+        }
+    }
+
+    {
+        console.log(`${tag} getting existing note content with note id ${getNoteId()}`);
+        let content = "";
+        {
+            const resp = await fetch(
+                `https://127.0.0.1:3000/get_note?id=${getNoteId()}`
+            );
+            const data = await resp.json();
+            content = data.content;
+            console.log(`${tag} received existing content`, {length: content.length, content});
+        }
+        addTextArea(videoArea, content);
+    }
+
+    addChips(videoArea);
+    attachPauseAndPlayListeners(videoArea);
+    {
+        const video = videoArea.querySelector("video");
+        if (!video.paused) {
+            console.log(`${tag} detected autoplay`);
+            await onStart();
+        }
+    }
+    console.log(`${tag} setup complete`);
 }
-setup();
+//// initial call not needed since yt-navigate-finish event is fired on page load
+// setup();
+
 // https://stackoverflow.com/a/34100952/11141271
-addEventListener("yt-navigate-finish", setup);
+addEventListener("yt-navigate-start", e => {
+    console.log(`${tag} yt-navigate-start event fired, calling onStop()`);
+    onStop();
+});
+addEventListener("yt-navigate-finish", e =>{
+    console.log(`${tag} yt-navigate-finish event fired, calling setup()`);
+    setup()
+});
+
