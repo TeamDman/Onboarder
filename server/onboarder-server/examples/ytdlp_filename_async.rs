@@ -1,5 +1,7 @@
 async fn get_ytdlp_filename(url: &str) -> Result<String, String> {
     let output = tokio::process::Command::new("yt-dlp")
+        .arg("--encoding")
+        .arg("utf-8")
         .arg("--print")
         .arg("filename")
         .arg("--cookies-from-browser")
@@ -23,7 +25,7 @@ async fn get_ytdlp_filename(url: &str) -> Result<String, String> {
 #[tokio::main]
 async fn main() {
     // Run the full command
-    let url = "https://www.youtube.com/watch?v=EdYwBk2qe7Q";
+    let url = "https://www.youtube.com/watch?v=-TVw_ndGyW4";
     let fname = get_ytdlp_filename(url).await.unwrap();
     println!("Filename: \"{}\"", fname);
 }
