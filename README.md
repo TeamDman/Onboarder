@@ -17,9 +17,7 @@ File on disk:
 
 ## TODO:
 
-- youtube playlist support since page doesn't refresh
-- system tray
-- start with windows
+- Open in vscode button
 - Auth; ensure requests are from the browser and nowhere else for now
 - Anti-clobber strategy
 
