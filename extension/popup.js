@@ -179,23 +179,61 @@ function attachPauseAndPlayListeners(videoArea) {
 
     video.addEventListener("pause", onPause);
     video.addEventListener("playing", onPlaying);
+}
 
-    // // Save the current pause and play methods only if they haven't been saved yet
-    // video.onboarder_original_pause =
-    //     video.onboarder_original_pause || video.pause;
-    // video.onboarder_original_play =
-    //     video.onboarder_original_play || video.play;
+async function onLike() {
+    if (window.onboarder_id != onboarder_id) return;
+    console.log(`${tag} video liked`, {time: getVideoProgress(), noteId: getNoteId()});
+    await appendContent(
+        `${new Date().toString()} --- ${getVideoProgress()} --- 👍`
+    );
+}
 
-    // // Override with your own
-    // video.pause = function () {
-    //     onPause();
-    //     this.onboarder_original_pause();
-    // };
+async function onUnlike() {
+    if (window.onboarder_id != onboarder_id) return;
+    console.log(`${tag} video unliked`, {time: getVideoProgress(), noteId: getNoteId()});
+    await appendContent(
+        `${new Date().toString()} --- ${getVideoProgress()} --- ➖👍`
+    );
+}
 
-    // video.play = function () {
-    //     onPlaying();
-    //     this.onboarder_original_play();
-    // };
+
+async function onDislike() {
+    if (window.onboarder_id != onboarder_id) return;
+    console.log(`${tag} video disliked`, {time: getVideoProgress(), noteId: getNoteId()});
+    await appendContent(
+        `${new Date().toString()} --- ${getVideoProgress()} --- 👎`
+    );
+}
+
+async function onUndislike() {
+    if (window.onboarder_id != onboarder_id) return;
+    console.log(`${tag} video undisliked`, {time: getVideoProgress(), noteId: getNoteId()});
+    await appendContent(
+        `${new Date().toString()} --- ${getVideoProgress()} --- ➖👎`
+    );
+}
+
+function attachLikeListeners() {
+    const likeButton = document.querySelector("#segmented-like-button button");
+    likeButton.addEventListener("click", async () => {
+        let pressed = likeButton.getAttribute("aria-pressed") == "true";
+        if (pressed) {
+            await onLike();
+        } else {
+            await onUnlike();
+        }
+    });
+
+    const dislikeButton = document.querySelector("#segmented-dislike-button button");
+    dislikeButton.addEventListener("click", async () => {
+        let pressed = dislikeButton.getAttribute("aria-pressed") == "true";
+        if (pressed) {
+            await onDislike();
+        } else {
+            await onUndislike();
+        }
+    });
 }
 
 function save(content) {
@@ -316,6 +354,7 @@ async function setup() {
 
     addChips(videoArea);
     attachPauseAndPlayListeners(videoArea);
+    attachLikeListeners();
     {
         const video = videoArea.querySelector("video");
         if (!video.paused) {
