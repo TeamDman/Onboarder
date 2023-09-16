@@ -20,12 +20,18 @@ struct Config {
     notes_dir: std::path::PathBuf,
     #[structopt(short, long, parse(from_os_str))]
     downloads_dir: std::path::PathBuf,
+    #[structopt(short, long, parse(from_os_str))]
+    search_dirs: Vec<std::path::PathBuf>,
+    #[structopt(short, long, parse(try_from_str))]
+    port: usize,
 }
 impl Clone for Config {
     fn clone(&self) -> Self {
         Config {
             notes_dir: self.notes_dir.clone(),
             downloads_dir: self.downloads_dir.clone(),
+            search_dirs: self.search_dirs.clone(),
+            port: self.port.clone(),
         }
     }
 }
@@ -61,8 +67,7 @@ struct State {
 
 #[tokio::main]
 async fn run_server<'a>(config: Config) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let port = 3000;
-    let addr = format!("127.0.0.1:{}", port).parse()?;
+    let addr = format!("127.0.0.1:{}", config.port).parse()?;
 
     
     // Load public certificate.
@@ -126,6 +131,31 @@ fn get_path_for_note_id(id: &str, notes_dir: &PathBuf, notes_map: &mut HashMap<S
     Ok(file_path)
 }
 
+
+async fn search(text: &str, dir: &PathBuf) -> Result<Vec<String>, String> {
+    let output = tokio::process::Command::new("pwsh")
+        .arg("-c")
+        .arg(format!(
+            "gci -Recurse {} | % {{ $_.FullName}} | rg -i {}",
+            dir.to_str().unwrap(),
+            text
+        ))
+        .output()
+        .await
+        .expect("Failed to execute command");
+
+    if output.status.success() {
+        let stdout_str = String::from_utf8_lossy(&output.stdout);
+        let results: Vec<String> = stdout_str
+            .lines()
+            .map(|s| s.to_string())
+            .filter(|s| !s.is_empty())
+            .collect();
+        Ok(results)
+    } else {
+        Err(String::from_utf8_lossy(&output.stderr).to_string())
+    }
+}
 
 fn get_dated_dir(parent_dir: &PathBuf) -> std::io::Result<PathBuf> {
     let now = Local::now();
@@ -201,6 +231,47 @@ async fn handle(
             let res: Response<Body> = Response::new("Note set".into());
             Ok(res)
         }
+        (&Method::GET, "/exists") => {
+            let query_map = url::form_urlencoded::parse(req.uri().query().unwrap_or("").as_bytes())
+                .into_owned()
+                .collect::<HashMap<String, String>>();
+        
+            if let Some(search_param) = query_map.get("search") {
+                let decoded_search = percent_encoding::percent_decode_str(search_param).decode_utf8_lossy();
+                
+                let dirs = &state.lock().await.config.search_dirs;
+                let mut total_results = Vec::new();
+        
+                for dir in dirs {
+                    match search(&decoded_search, dir).await {
+                        Ok(results) => {
+                            total_results.extend(results);
+                        },
+                        Err(err) => {
+                            eprintln!("Error in search: {}", err);
+                            // ... Maybe some error handling ...
+                        },
+                    }
+                }
+        
+                let res = if total_results.is_empty() {
+                    Response::builder()
+                        .status(StatusCode::NOT_FOUND)
+                        .body("No results found".into())
+                        .unwrap()
+                } else {
+                    Response::new(format!("Results: {:?}", total_results).into())
+                };
+        
+                Ok(res)
+            } else {
+                Ok(Response::builder()
+                    .status(StatusCode::BAD_REQUEST)
+                    .body("Missing search parameter".into())
+                    .unwrap())
+            }
+        }
+        
         (&Method::POST, "/download") => {
             let whole_body = hyper::body::to_bytes(req.into_body()).await.unwrap();
             let url = String::from_utf8(whole_body.to_vec()).unwrap();

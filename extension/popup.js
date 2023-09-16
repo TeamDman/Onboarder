@@ -1,6 +1,7 @@
 let onboarder_id = "not setup yet"
 let tag = `[Onboarder-${onboarder_id}]`;
 const textAreaId = "custom_notes_area";
+let port = 3567;
 
 function removeElementById(id) {
     let element = document.getElementById(id);
@@ -242,7 +243,7 @@ function save(content) {
     console.log(`${tag} saving`, {id, content});
 
     // Create a POST request to the Rust HTTP server
-    return fetch("https://127.0.0.1:3000/set_note", {
+    return fetch(`https://127.0.0.1:${port}/set_note`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -262,28 +263,44 @@ function save(content) {
 }
 
 async function downloadVideo() {
+    console.log(`${tag} Ensuring video has not already been downloaded before downloading`);
+    {
+        const videoId = document.querySelector("ytd-watch-metadata").getAttribute("video-id");
+        const resp = await fetch(`https://127.0.0.1:${port}/exists?search=${videoId}`);
+        // ensure response is 404
+        if (resp.status != 404) {
+            console.log(`${tag} Video already downloaded, not downloading again`);
+            const text = await resp.text();
+            alert(`Video already downloaded!\n${text}`);
+            return;
+        }
+    }
+
+
     console.log(`${tag} Downloading video`);
-    const resp = await fetch("https://127.0.0.1:3000/download", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/text",
-        },
-        body: window.location.href.split("&")[0],
-    });
-    if (resp.status == 200) {
-        const fileId = await resp.text();
-        const content =
-            getCurrentNoteContent() +
-            `\n${new Date().toString()} --- Download started for "${fileId}"`;
-        await save(content);
-        const note = document.getElementById("custom_notes_area");
-        note.value = content;
-    } else {
-        const content =
-            getCurrentNoteContent() +
-            `\nFailed to download video, status code: ${resp.status}`;
-        const note = document.getElementById("custom_notes_area");
-        note.value = content;
+    {
+        const resp = await fetch(`https://127.0.0.1:${port}/download`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/text",
+            },
+            body: window.location.href.split("&")[0],
+        });
+        if (resp.status == 200) {
+            const fileId = await resp.text();
+            const content =
+                getCurrentNoteContent() +
+                `\n${new Date().toString()} --- Download started for "${fileId}"`;
+            await save(content);
+            const note = document.getElementById("custom_notes_area");
+            note.value = content;
+        } else {
+            const content =
+                getCurrentNoteContent() +
+                `\nFailed to download video, status code: ${resp.status}`;
+            const note = document.getElementById("custom_notes_area");
+            note.value = content;
+        }
     }
 }
 
@@ -301,7 +318,7 @@ async function setup() {
         let attempt = 0;
         while (true) {
             try {
-                const resp = await fetch("https://127.0.0.1:3000/healthcheck");
+                const resp = await fetch(`https://127.0.0.1:${port}/healthcheck`);
                 if (resp.status == 200) {
                     break;
                 }
@@ -343,7 +360,7 @@ async function setup() {
         let content = "";
         {
             const resp = await fetch(
-                `https://127.0.0.1:3000/get_note?id=${getNoteId()}`
+                `https://127.0.0.1:${port}/get_note?id=${getNoteId()}`
             );
             const data = await resp.json();
             content = data.content;

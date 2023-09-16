@@ -1,18 +1,27 @@
-GET http://127.0.0.1:3001/
+@port = 3567
+@hostname = 127.0.0.1
+@protocol = http
+@base = {{hostname}}:{{port}}
+
+GET https://{{base}}/
 ###
-GET https://127.0.0.1:3000/healthcheck
+GET https://{{base}}/healthcheck
 ###
-GET https://127.0.0.1:3000/no_page_here
+GET https://{{base}}/no_page_here
 ###
-GET https://127.0.0.1:3000/get_note?id=my note id
+GET https://{{base}}/get_note?id=my note id
 ###
-GET https://127.0.0.1:3000/get_note?id=bad note id 😎
+GET https://{{base}}/get_note?id=bad note id 😎
 ###
 
-POST https://127.0.0.1:3000/set_note
+POST{{base}}/set_note
 Content-Type: application/json
 
 {
     "id": "my note id",
     "content": "yarr, here be content"
 }
+
+###
+
+GET https://{{base}}/exists?search=notherelol
