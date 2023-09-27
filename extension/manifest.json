@@ -1,16 +1,16 @@
 {
     "manifest_version": 3,
-    "name": "YouTube Video Downloader",
+    "name": "Onboarder",
     "version": "1.0",
     "description": "Download videos from YouTube",
-    "permissions": ["activeTab", "http://localhost:3000/"],
+    "permissions": ["activeTab", "storage"],
     "action": {
       "default_popup": "popup.html"
     },
     "content_scripts": [
       {
         "matches": ["*://www.youtube.com/*"],
-        "js": ["popup.js"]
+        "js": ["content.js"]
       }
     ]
   }

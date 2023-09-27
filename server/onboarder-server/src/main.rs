@@ -170,8 +170,8 @@ async fn get_ytdlp_filename(url: &str) -> Result<String, String> {
         .arg("utf-8")
         .arg("--print")
         .arg("filename")
-        .arg("--cookies-from-browser")
-        .arg("edge")
+        // .arg("--cookies-from-browser")
+        // .arg("edge")
         .arg("--windows-filenames")
         .arg("--embed-metadata")
         .arg(url)
@@ -297,7 +297,8 @@ async fn handle(
                 .arg("-WorkingDirectory")
                 .arg("$(Get-Location)")
                 .arg("-c")
-                .arg(format!("wt pwsh.exe -NoProfile -WorkingDirectory $(Get-Location) -c 'yt-dlp --cookies-from-browser edge --windows-filenames --embed-metadata \"{}\" && Write-Host \"\"press any key to close\"\" && $Host.UI.RawUI.ReadKey(\"\"NoEcho,IncludeKeyDown\"\")'", url))
+                // .arg(format!("wt pwsh.exe -NoProfile -WorkingDirectory $(Get-Location) -c 'yt-dlp --cookies-from-browser edge --windows-filenames --embed-metadata \"{}\" && Write-Host \"\"press any key to close\"\" && $Host.UI.RawUI.ReadKey(\"\"NoEcho,IncludeKeyDown\"\")'", url))
+                .arg(format!("wt pwsh.exe -NoProfile -WorkingDirectory $(Get-Location) -c 'yt-dlp --windows-filenames --embed-metadata \"{}\" && Write-Host \"\"press any key to close\"\" && $Host.UI.RawUI.ReadKey(\"\"NoEcho,IncludeKeyDown\"\")'", url))
                 .output()
                 .expect("Failed to execute command");
         
