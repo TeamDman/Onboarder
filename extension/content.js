@@ -132,6 +132,20 @@ function addChips(videoArea) {
                 await downloadVideo();
             },
         },
+        {
+            text: "Download (🎶 🚫📷)",
+            description: "Download without video",
+            action: async function() {
+                await downloadAudio();
+            }
+        },
+        {
+            text: "📁",
+            description: "Open Folder",
+            action: async function() {
+                await openFolder();
+            }
+        }
     ];
     actions.forEach((action) => {
         const chip = document.createElement("button");
@@ -318,6 +332,60 @@ async function downloadVideo() {
             note.value = content;
         }
     }
+}
+
+
+async function downloadAudio() {
+    console.log(`${tag} Ensuring audio has not already been downloaded before downloading`);
+    {
+        const videoId = document.querySelector("ytd-watch-metadata").getAttribute("video-id");
+        const resp = await fetch(`${serverUrl}/exists?search=${videoId}`);
+        // ensure response is 404
+        if (resp.status != 404) {
+            console.log(`${tag} audio already downloaded, not downloading again`);
+            const text = await resp.text();
+            alert(`Video already downloaded!\n${text}`);
+            return;
+        }
+    }
+
+
+    console.log(`${tag} Downloading audio`);
+    {
+        const resp = await fetch(`${serverUrl}/download_audio`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/text",
+            },
+            body: window.location.href.split("&")[0],
+        });
+        if (resp.status == 200) {
+            const fileId = await resp.text();
+            const content =
+                getCurrentNoteContent() +
+                `\n${new Date().toString()} --- Download started for "${fileId}"`;
+            await save(content);
+            const note = document.getElementById("custom_notes_area");
+            note.value = content;
+        } else {
+            const content =
+                getCurrentNoteContent() +
+                `\nFailed to download audio, status code: ${resp.status}`;
+            const note = document.getElementById("custom_notes_area");
+            note.value = content;
+        }
+    }
+}
+
+async function openFolder() {
+    console.log(`${tag} Opening folder`);
+    await fetch(`${serverUrl}/open_folder`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/text",
+        },
+        body: window.location.href.split("&")[0],
+    });
 }
 
 async function sleep(ms) {

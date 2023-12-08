@@ -6,6 +6,7 @@ use hyper_rustls::TlsAcceptor;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::convert::Infallible;
+use std::env;
 use std::fs::{create_dir_all, OpenOptions};
 use std::io::{Write, Read};
 use std::path::PathBuf;
@@ -187,6 +188,32 @@ async fn get_ytdlp_filename(url: &str) -> Result<String, String> {
         Err(String::from_utf8_lossy(&output.stderr).to_string())
     }
 }
+async fn get_ytdlp_audio_filename(url: &str) -> Result<String, String> {
+    let output = tokio::process::Command::new("yt-dlp")
+        .arg("--encoding")
+        .arg("utf-8")
+        .arg("--print")
+        .arg("filename")
+        // .arg("--cookies-from-browser")
+        // .arg("edge")
+        .arg("-f")
+        .arg("bestaudio")
+        .arg("--extract-audio")
+        .arg("--windows-filenames")
+        .arg("--embed-metadata")
+        .arg(url)
+        .output()
+        .await
+        .expect("Failed to execute command");
+
+    if output.status.success() {
+        let fname = String::from_utf8_lossy(&output.stdout);
+        let fname_trimmed = fname.trim_end_matches('\n');
+        Ok(fname_trimmed.to_string())
+    } else {
+        Err(String::from_utf8_lossy(&output.stderr).to_string())
+    }
+}
 
 async fn handle(
     req: Request<Body>,
@@ -305,6 +332,94 @@ async fn handle(
             let res = if output.status.success() {
                 println!("Subprocess invoked successfully");
                 Response::new(filename.into())
+            } else {
+                eprintln!("Subprocess failed: {}", String::from_utf8_lossy(&output.stderr));
+                Response::builder()
+                    .status(StatusCode::INTERNAL_SERVER_ERROR)
+                    .body("download failed".into())
+                    .unwrap()
+            };
+        
+            Ok(res)
+        }
+
+        
+        (&Method::POST, "/download_audio") => {
+            let whole_body = hyper::body::to_bytes(req.into_body()).await.unwrap();
+            let url = String::from_utf8(whole_body.to_vec()).unwrap();
+        
+            let dir = &state.lock().await.config.downloads_dir;
+            let dated_dir = match get_dated_dir(dir) {
+                Ok(it) => it,
+                Err(err) => {
+                    eprintln!("Error getting dated dir: {}", err);
+                    return Ok(Response::builder()
+                        .status(StatusCode::INTERNAL_SERVER_ERROR)
+                        .body("Error getting dated dir".into())
+                        .unwrap());
+                }
+            };
+
+            let filename = get_ytdlp_audio_filename(&url).await.expect("Failed to get filename");
+            
+            // Run the full command
+            let output = std::process::Command::new("pwsh")
+                .current_dir(&dated_dir)
+                .arg("-NoProfile")
+                .arg("-WorkingDirectory")
+                .arg("$(Get-Location)")
+                .arg("-c")
+                // .arg(format!("wt pwsh.exe -NoProfile -WorkingDirectory $(Get-Location) -c 'yt-dlp --cookies-from-browser edge --windows-filenames --embed-metadata \"{}\" && Write-Host \"\"press any key to close\"\" && $Host.UI.RawUI.ReadKey(\"\"NoEcho,IncludeKeyDown\"\")'", url))
+                .arg(format!("wt pwsh.exe -NoProfile -WorkingDirectory $(Get-Location) -c 'yt-dlp \"{}\" -f bestaudio --extract-audio --windows-filenames --embed-metadata  && Write-Host \"\"press any key to close\"\" && $Host.UI.RawUI.ReadKey(\"\"NoEcho,IncludeKeyDown\"\")'", url))
+                .output()
+                .expect("Failed to execute command");
+        
+            let res = if output.status.success() {
+                println!("Subprocess invoked successfully");
+                Response::new(filename.into())
+            } else {
+                eprintln!("Subprocess failed: {}", String::from_utf8_lossy(&output.stderr));
+                Response::builder()
+                    .status(StatusCode::INTERNAL_SERVER_ERROR)
+                    .body("download failed".into())
+                    .unwrap()
+            };
+        
+            Ok(res)
+        }
+
+        
+        (&Method::POST, "/open_folder") => {
+            let whole_body = hyper::body::to_bytes(req.into_body()).await.unwrap();
+            let url = String::from_utf8(whole_body.to_vec()).unwrap();
+            println!("Opening folder for {}", url);
+            
+            let dir = &state.lock().await.config.downloads_dir;
+            let dated_dir = match get_dated_dir(dir) {
+                Ok(it) => it,
+                Err(err) => {
+                    eprintln!("Error getting dated dir: {}", err);
+                    return Ok(Response::builder()
+                        .status(StatusCode::INTERNAL_SERVER_ERROR)
+                        .body("Error getting dated dir".into())
+                        .unwrap());
+                }
+            };
+            
+            let absolute_path = env::current_dir().unwrap().join(&dated_dir).canonicalize().unwrap();
+
+            let output = std::process::Command::new("explorer.exe")
+                .current_dir(&dated_dir)
+                .arg(absolute_path.clone())
+                .output()
+                .expect("Failed to execute command");
+        
+            let res = if output.status.success() {
+                println!("Subprocess invoked successfully");
+                // Convert the absolute path to a String
+                let path_str = absolute_path.to_str().unwrap().to_string();
+                // Create the response with the string body
+                Response::new(Body::from(path_str))
             } else {
                 eprintln!("Subprocess failed: {}", String::from_utf8_lossy(&output.stderr));
                 Response::builder()
