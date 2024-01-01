@@ -246,9 +246,9 @@ async function onUndislike() {
 }
 
 function attachLikeListeners() {
-    const likeButton = document.querySelector("#segmented-like-button button");
+    const likeButton = document.querySelector("like-button-view-model");
     likeButton.addEventListener("click", async () => {
-        let pressed = likeButton.getAttribute("aria-pressed") == "true";
+        let pressed = likeButton.querySelector("[aria-pressed=true]") != null;
         if (pressed) {
             await onLike();
         } else {
@@ -256,15 +256,16 @@ function attachLikeListeners() {
         }
     });
 
-    const dislikeButton = document.querySelector("#segmented-dislike-button button");
+    const dislikeButton = document.querySelector("dislike-button-view-model");
     dislikeButton.addEventListener("click", async () => {
-        let pressed = dislikeButton.getAttribute("aria-pressed") == "true";
+        let pressed = dislikeButton.querySelector("[aria-pressed=true]") != null;
         if (pressed) {
             await onDislike();
         } else {
             await onUndislike();
         }
     });
+    console.log(`${tag} attached like listeners`, likeButton, dislikeButton);
 }
 
 function save(content) {
