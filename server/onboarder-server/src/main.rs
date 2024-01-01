@@ -389,12 +389,54 @@ async fn handle(
         }
 
         
-        (&Method::POST, "/open_folder") => {
+        (&Method::POST, "/open_videos_folder") => {
             let whole_body = hyper::body::to_bytes(req.into_body()).await.unwrap();
             let url = String::from_utf8(whole_body.to_vec()).unwrap();
             println!("Opening folder for {}", url);
             
             let dir = &state.lock().await.config.downloads_dir;
+            let dated_dir = match get_dated_dir(dir) {
+                Ok(it) => it,
+                Err(err) => {
+                    eprintln!("Error getting dated dir: {}", err);
+                    return Ok(Response::builder()
+                        .status(StatusCode::INTERNAL_SERVER_ERROR)
+                        .body("Error getting dated dir".into())
+                        .unwrap());
+                }
+            };
+            
+            let absolute_path = env::current_dir().unwrap().join(&dated_dir).canonicalize().unwrap();
+
+            let output = std::process::Command::new("explorer.exe")
+                .current_dir(&dated_dir)
+                .arg(absolute_path.clone())
+                .output()
+                .expect("Failed to execute command");
+        
+            let res = if output.status.success() {
+                println!("Subprocess invoked successfully");
+                // Convert the absolute path to a String
+                let path_str = absolute_path.to_str().unwrap().to_string();
+                // Create the response with the string body
+                Response::new(Body::from(path_str))
+            } else {
+                eprintln!("Subprocess failed: {}", String::from_utf8_lossy(&output.stderr));
+                Response::builder()
+                    .status(StatusCode::INTERNAL_SERVER_ERROR)
+                    .body("download failed".into())
+                    .unwrap()
+            };
+        
+            Ok(res)
+        }
+        
+        (&Method::POST, "/open_notes_folder") => {
+            let whole_body = hyper::body::to_bytes(req.into_body()).await.unwrap();
+            let url = String::from_utf8(whole_body.to_vec()).unwrap();
+            println!("Opening folder for {}", url);
+            
+            let dir = &state.lock().await.config.notes_dir;
             let dated_dir = match get_dated_dir(dir) {
                 Ok(it) => it,
                 Err(err) => {

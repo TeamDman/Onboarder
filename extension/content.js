@@ -140,10 +140,17 @@ function addChips(videoArea) {
             }
         },
         {
-            text: "📁",
-            description: "Open Folder",
+            text: "📁 Videos",
+            description: "Open videos folder",
             action: async function() {
-                await openFolder();
+                await openVideosFolder();
+            }
+        },
+        {
+            text: "📁 Notes",
+            description: "Open notes folder",
+            action: async function() {
+                await openNotesFolder();
             }
         }
     ];
@@ -378,9 +385,19 @@ async function downloadAudio() {
     }
 }
 
-async function openFolder() {
-    console.log(`${tag} Opening folder`);
-    await fetch(`${serverUrl}/open_folder`, {
+async function openVideosFolder() {
+    console.log(`${tag} Opening videos folder`);
+    await fetch(`${serverUrl}/open_videos_folder`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/text",
+        },
+        body: window.location.href.split("&")[0],
+    });
+}
+async function openNotesFolder() {
+    console.log(`${tag} Opening notes folder`);
+    await fetch(`${serverUrl}/open_notes_folder`, {
         method: "POST",
         headers: {
             "Content-Type": "application/text",
