@@ -152,6 +152,13 @@ function addChips(videoArea) {
             action: async function() {
                 await openNotesFolder();
             }
+        },
+        {
+            text: "📝 Transcript",
+            description: "Open transcript website",
+            action: async function() {
+                openTranscriptInNewTab();
+            }
         }
     ];
     actions.forEach((action) => {
@@ -405,6 +412,24 @@ async function openNotesFolder() {
         body: window.location.href.split("&")[0],
     });
 }
+
+function openTranscriptInNewTab() {
+    // Create a URL object from the current window location
+    var currentUrl = new URL(window.location.href);
+    
+    // Get the value of the 'v' query parameter
+    var videoId = currentUrl.searchParams.get('v');
+
+    if (videoId) {
+        var transcriptUrl = 'https://youtubetranscript.com/?v=' + videoId;
+        
+        // Open the transcript URL in a new tab
+        window.open(transcriptUrl, '_blank');
+    } else {
+        console.error('Video ID not found in the URL');
+    }
+}
+
 
 async function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
