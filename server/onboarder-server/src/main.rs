@@ -80,7 +80,25 @@ async fn run_server<'a>(config: Config) -> Result<(), Box<dyn std::error::Error 
     // Build TLS configuration.
 
     // Create a TCP listener via tokio.
-    let incoming = AddrIncoming::bind(&addr)?;
+    let mut incoming = None;
+    for _ in 0..25 {
+        match AddrIncoming::bind(&addr) {
+            Ok(incoming_) => {
+                incoming = Some(incoming_);
+                break;
+            }
+            Err(e) => {
+                eprintln!("Failed to bind to port: {}", e);
+                std::thread::sleep(std::time::Duration::from_secs(1));
+            }
+        }
+    }
+
+    let Some(incoming) = incoming else {
+        eprintln!("Failed to bind to port after 25 attempts");
+        std::process::exit(1);
+    };
+
     let acceptor = TlsAcceptor::builder()
         .with_single_cert(certs, key)
         .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, format!("{}", e)))?
