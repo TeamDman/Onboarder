@@ -159,6 +159,13 @@ function addChips(videoArea) {
             action: async function() {
                 openTranscriptInNewTab();
             }
+        },
+        {
+            text: "✂ Copy to clipboard",
+            description: "Copies video information to clipboard",
+            action: async function() {
+                copyVideoDetailsToClipboard();
+            }
         }
     ];
     actions.forEach((action) => {
@@ -428,6 +435,16 @@ function openTranscriptInNewTab() {
     } else {
         console.error('Video ID not found in the URL');
     }
+}
+
+function copyVideoDetailsToClipboard() {
+    const videoTitle = document.querySelector("ytd-watch-metadata #title").innerText;
+    // remove query params
+    const videoId = document.querySelector("ytd-watch-metadata").getAttribute("video-id");
+    const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
+    const uploaderName = document.querySelector("ytd-channel-name a").innerText;
+    const str = `[${uploaderName} - ${videoTitle}](${videoUrl})`;
+    navigator.clipboard.writeText(str);
 }
 
 
