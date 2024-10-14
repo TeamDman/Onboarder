@@ -16,7 +16,7 @@ use std::sync::Arc;
 use structopt::StructOpt;
 use tokio::sync::Mutex;
 use tracing::level_filters::LevelFilter;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, trace};
 use tracing_subscriber::EnvFilter;
 
 #[derive(StructOpt)]
@@ -174,13 +174,15 @@ fn get_path_for_note_id(
 }
 
 async fn search(text: &str, dir: &PathBuf) -> Result<Vec<String>, String> {
+    let shell_code = format!(
+        "Get-ChildItem -Recurse {} | ForEach-Object {{ $_.FullName}} | rg --ignore-case --fixed-strings --regexp '{}'",
+        dir.to_str().unwrap(),
+        text
+    );
+    debug!("shell_code: {}", shell_code);
     let output = tokio::process::Command::new("pwsh")
         .arg("-c")
-        .arg(format!(
-            "gci -Recurse {} | % {{ $_.FullName}} | rg -i \"{}\"",
-            dir.to_str().unwrap(),
-            text
-        ))
+        .arg(shell_code)
         .output()
         .await
         .expect("Failed to execute command");
@@ -265,7 +267,10 @@ async fn handle(
     state: Arc<Mutex<State>>,
 ) -> Result<Response<Body>, Infallible> {
     info!("{} {}", req.method(), req.uri().path());
-    debug!("query: {:?}", req.uri().query());
+    match req.uri().query() {
+        Some(query) => info!("query: {}", query),
+        None => {},
+    }
     let mut res = match (req.method(), req.uri().path()) {
         (&Method::OPTIONS, _) => {
             let res: Response<Body> = Response::new("".into());
@@ -284,7 +289,7 @@ async fn handle(
             let whole_body = hyper::body::to_bytes(req.into_body()).await.unwrap();
             let note: Note = serde_json::from_slice(&whole_body).unwrap();
 
-            info!("{:?}", note);
+            trace!("{:?}", note);
 
             let file_path =
                 match get_path_for_note_id(&note.id, &dastate.config.notes_dir, &mut map) {
@@ -305,7 +310,9 @@ async fn handle(
                 .truncate(true)
                 .open(&file_path)
                 .unwrap();
-            file.write_all(note.content.as_bytes()).unwrap();
+            let bytes = note.content.as_bytes();
+            info!("Writing {} bytes to \"{}\"", bytes.len(), file_path.display());
+            file.write_all(bytes).unwrap();
 
             let res: Response<Body> = Response::new("Note set".into());
             Ok(res)
@@ -329,7 +336,7 @@ async fn handle(
                         }
                         Err(err) => {
                             error!("Error in search: {}", err);
-                            // ... Maybe some error handling ...
+                            info!("Sending 'not found' result due to error");
                         }
                     }
                 }
@@ -614,6 +621,9 @@ async fn handle(
         "Access-Control-Allow-Headers",
         "Content-Type".parse().unwrap(),
     );
+    let status = res.status();
+    info!("Response: {}", status);
+
     Ok(res)
 }
 
