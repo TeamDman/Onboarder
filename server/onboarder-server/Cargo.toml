@@ -9,6 +9,7 @@ edition = "2021"
 chrono = "0.4.30"
 hyper = { version = "0.14.27", features = ["full"] }
 hyper-rustls = "0.24.1"
+itertools = "0.13.0"
 percent-encoding = "2.3.0"
 rustls = "0.21.7"
 rustls-pemfile = "1.0.3"
@@ -18,4 +19,6 @@ structopt = "0.3.26"
 systray = "0.4.0"
 tokio = { version = "1.32.0", features = ["full"] }
 tokio-rustls = "0.24.1"
+tracing = "0.1.40"
+tracing-subscriber = {version="0.3.18",features = ["fmt", "env-filter"]}
 url = "2.4.1"
