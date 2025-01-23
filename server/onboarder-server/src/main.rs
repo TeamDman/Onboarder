@@ -1,4 +1,5 @@
 use chrono::{Datelike, Local};
+use cloud_terrastodon_core_user_input::prelude::{pick, prompt_line, FzfArgs};
 use hyper::server::conn::AddrIncoming;
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Request, Response, Server};
@@ -14,6 +15,7 @@ use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::sync::Arc;
 use structopt::StructOpt;
+use strum::{Display, VariantArray};
 use tokio::sync::Mutex;
 use tracing::level_filters::LevelFilter;
 use tracing::{debug, error, info, trace};
@@ -41,7 +43,8 @@ impl Clone for Config {
     }
 }
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    color_eyre::install()?;
     // Initialize tracing subscriber
     tracing_subscriber::fmt()
         .with_env_filter(
@@ -77,6 +80,7 @@ fn main() {
         error!("FAILED: {}", e);
         std::process::exit(1);
     }
+    Ok(())
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -92,8 +96,8 @@ struct State {
 
 #[tokio::main]
 async fn run_server<'a>(config: Config) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let addr = format!("127.0.0.1:{}", config.port).parse()?;
-    info!("Attempting to listen on https://{}", addr);
+    let mut addr = format!("127.0.0.1:{}", config.port).parse()?;
+    let mut port_changed = false;
 
     // Ensure our certs are available before binding
     let certs = load_certs("onboarder+1.pem")?;
@@ -101,7 +105,8 @@ async fn run_server<'a>(config: Config) -> Result<(), Box<dyn std::error::Error 
 
     // Create a TCP listener via tokio.
     let mut incoming = None;
-    for _ in 0..25 {
+    loop {
+        info!("Attempting to listen on https://{}", addr);
         match AddrIncoming::bind(&addr) {
             Ok(incoming_) => {
                 incoming = Some(incoming_);
@@ -109,16 +114,48 @@ async fn run_server<'a>(config: Config) -> Result<(), Box<dyn std::error::Error 
             }
             Err(e) => {
                 error!("Failed to bind to port: {}", e);
-                std::thread::sleep(std::time::Duration::from_secs(1));
+                #[derive(Debug, VariantArray, Display)]
+                enum Thing {
+                    Quit,
+                    Retry,
+                    ChangePort,
+                }
+                let chosen = pick(FzfArgs {
+                    choices: Thing::VARIANTS.iter().collect_vec(),
+                    header: Some("Failed to bind to port. What would you like to do?".to_string()),
+                    prompt: None,
+                })?;
+                match chosen {
+                    Thing::Quit => std::process::exit(1),
+                    Thing::Retry => continue,
+                    Thing::ChangePort => loop {
+                        let new_port = prompt_line("Enter a new port number: ").await?;
+                        match new_port.parse::<usize>() {
+                            Ok(new_port) => {
+                                info!("Changing port to {}", new_port);
+                                addr = format!("127.0.0.1:{}", new_port).parse()?;
+                                port_changed = true;
+                                break;
+                            }
+                            Err(e) => {
+                                error!("Invalid port number: {}", e);
+                            }
+                        }
+                    },
+                }
             }
         }
     }
 
     let Some(incoming) = incoming else {
-        error!("Failed to bind to port after 25 attempts");
+        error!("Failed to bind to port");
         std::process::exit(1);
     };
     info!("Successfully bound port");
+    if port_changed {
+        info!("Successfully bound using new port, writing change to port.txt");
+        tokio::fs::write("port.txt", addr.port().to_string()).await?;
+    }
 
     let acceptor = TlsAcceptor::builder()
         .with_single_cert(certs, key)
@@ -269,7 +306,7 @@ async fn handle(
     info!("{} {}", req.method(), req.uri().path());
     match req.uri().query() {
         Some(query) => info!("query: {}", query),
-        None => {},
+        None => {}
     }
     let mut res = match (req.method(), req.uri().path()) {
         (&Method::OPTIONS, _) => {
@@ -311,7 +348,11 @@ async fn handle(
                 .open(&file_path)
                 .unwrap();
             let bytes = note.content.as_bytes();
-            info!("Writing {} bytes to \"{}\"", bytes.len(), file_path.display());
+            info!(
+                "Writing {} bytes to \"{}\"",
+                bytes.len(),
+                file_path.display()
+            );
             file.write_all(bytes).unwrap();
 
             let res: Response<Body> = Response::new("Note set".into());

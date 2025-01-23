@@ -22,3 +22,7 @@ tokio-rustls = "0.24.1"
 tracing = "0.1.40"
 tracing-subscriber = {version="0.3.18",features = ["fmt", "env-filter"]}
 url = "2.4.1"
+cloud_terrastodon_core_user_input = { git = "https://github.com/aafc-cloud/Cloud-Terrastodon/", rev = "875563ac3b6a9cb827265e610b8b5eaaa7bd0177" }
+color-eyre = "0.6.3"
+eyre = "0.6.12"
+strum = { version = "0.26.3", features = ["derive"] }
