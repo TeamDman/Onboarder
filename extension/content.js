@@ -525,8 +525,8 @@ async function setup() {
     }
     console.log(`${tag} setup complete`);
 }
-//// initial call not needed since yt-navigate-finish event is fired on page load
-// setup();
+
+setup();
 
 // https://stackoverflow.com/a/34100952/11141271
 addEventListener("yt-navigate-start", e => {
