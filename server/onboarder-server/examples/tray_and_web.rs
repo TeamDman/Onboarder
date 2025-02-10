@@ -1,9 +1,14 @@
-use hyper::service::{make_service_fn, service_fn};
-use hyper::{Body, Request, Response, Server};
+use hyper::service::make_service_fn;
+use hyper::service::service_fn;
+use hyper::Body;
+use hyper::Request;
+use hyper::Response;
+use hyper::Server;
 use std::convert::Infallible;
 use std::sync::Arc;
 use systray::Application;
-use tokio::sync::{mpsc, Mutex};
+use tokio::sync::mpsc;
+use tokio::sync::Mutex;
 
 async fn hello(_: Request<Body>) -> Result<Response<Body>, Infallible> {
     Ok(Response::new(Body::from("Hello World")))
