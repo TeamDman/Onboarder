@@ -6,14 +6,14 @@ async fn main() {
     println!("");
     // ch
     // "｜" len=3
-    
+
     println!("bytes");
     let bytes = ch.as_bytes();
     println!("\"{:?}\" len={}", bytes, bytes.len());
     println!("");
     // bytes
     // "[239, 189, 156]" len=3
-    
+
     println!("decoded");
     let decoded = String::from_utf8_lossy(bytes);
     println!("\"{}\" len={}", decoded, decoded.len());
@@ -44,7 +44,7 @@ async fn main() {
     println!("");
     // "｜" len=3
     // "｜" == "｜" ? true
-    
+
     println!("python1");
     let output = std::process::Command::new(r"C:\ProgramData\Anaconda3\python.exe")
         .arg("-c")
@@ -57,7 +57,6 @@ async fn main() {
     println!("");
     // "" len=0
     // "｜" == "" ? false
-
 
     println!("python2");
     let output = std::process::Command::new(r"C:\ProgramData\Anaconda3\python.exe")
@@ -80,7 +79,7 @@ async fn main() {
     let output = std::process::Command::new(r"C:\ProgramData\Anaconda3\python.exe")
         .arg("-c")
         .arg("import sys; print(sys.stdout.encoding, end='')")
-        .env("PYTHONIOENCODING","utf-8")
+        .env("PYTHONIOENCODING", "utf-8")
         .output()
         .unwrap();
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -98,7 +97,7 @@ async fn main() {
     let output = std::process::Command::new(r"C:\ProgramData\Anaconda3\python.exe")
         .arg("-c")
         .arg("print('｜', end='')")
-        .env("PYTHONIOENCODING","utf-8")
+        .env("PYTHONIOENCODING", "utf-8")
         .output()
         .unwrap();
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -110,10 +109,10 @@ async fn main() {
 
     println!("pwsh1");
     let output = tokio::process::Command::new("pwsh")
-    .arg("-NoProfile")
-    .arg("-Command")
-    .arg("Write-Host -NoNewLine \"｜\"")
-    .output()
+        .arg("-NoProfile")
+        .arg("-Command")
+        .arg("Write-Host -NoNewLine \"｜\"")
+        .output()
         .await
         .expect("Failed to execute command");
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -122,7 +121,7 @@ async fn main() {
     println!("");
     // "|" len=1
     // "｜" == "|" ? false
-    
+
     println!("pwsh2");
     let output = tokio::process::Command::new("pwsh")
     .arg("-NoProfile")
@@ -140,10 +139,10 @@ async fn main() {
 
     println!("pwsh3");
     let output = tokio::process::Command::new("pwsh")
-    .arg("-NoProfile")
-    .arg("-Command")
-    .arg("Write-Host -NoNewLine \"｜\"")
-    .output()
+        .arg("-NoProfile")
+        .arg("-Command")
+        .arg("Write-Host -NoNewLine \"｜\"")
+        .output()
         .await
         .expect("Failed to execute command");
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -153,14 +152,13 @@ async fn main() {
     // "｜" len=3
     // "｜" == "｜" ? true
 
-
     println!("ytdlp1");
     let output = std::process::Command::new("yt-dlp")
         .arg("--print")
         .arg("filename")
         .arg("--windows-filenames")
         .arg("https://www.youtube.com/watch?v=-TVw_ndGyW4")
-        .env("PYTHONIOENCODING","utf-8")
+        .env("PYTHONIOENCODING", "utf-8")
         .output()
         .unwrap();
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -179,7 +177,7 @@ async fn main() {
         .arg("--print")
         .arg("filename")
         .arg("https://www.youtube.com/watch?v=-TVw_ndGyW4")
-        .env("PYTHONIOENCODING","utf-8")
+        .env("PYTHONIOENCODING", "utf-8")
         .output()
         .unwrap();
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -218,7 +216,7 @@ async fn main() {
         .arg("--print")
         .arg("filename")
         .arg("https://www.youtube.com/watch?v=-TVw_ndGyW4")
-        .env("PYTHONIOENCODING","utf-8")
+        .env("PYTHONIOENCODING", "utf-8")
         .output()
         .unwrap();
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -247,7 +245,7 @@ async fn main() {
     // [youtube] -TVw_ndGyW4: Downloading android player API JSON
     // [youtube] -TVw_ndGyW4: Downloading m3u8 information
     // [debug] Sort order given by extractor: quality, res, fps, hdr:12, source, vcodec:vp9.2, channels, acodec, lang, proto
-    // [debug] Formats sorted by: hasvid, ie_pref, quality, res, fps, hdr:12(7), source, vcodec:vp9.2(10), channels, acodec, lang, proto, size, br, asr, vext, aext, hasaud, id     
+    // [debug] Formats sorted by: hasvid, ie_pref, quality, res, fps, hdr:12(7), source, vcodec:vp9.2(10), channels, acodec, lang, proto, size, br, asr, vext, aext, hasaud, id
     // [debug] Default format spec: bestvideo*+bestaudio/best
     // [info] -TVw_ndGyW4: Downloading 1 format(s): 248+251
 
@@ -264,7 +262,7 @@ async fn main() {
         .arg("--print")
         .arg("filename")
         .arg("https://www.youtube.com/watch?v=-TVw_ndGyW4")
-        .env("PYTHONIOENCODING","utf-8")
+        .env("PYTHONIOENCODING", "utf-8")
         .output()
         .unwrap();
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -293,7 +291,7 @@ async fn main() {
     // [youtube] -TVw_ndGyW4: Downloading android player API JSON
     // [youtube] -TVw_ndGyW4: Downloading m3u8 information
     // [debug] Sort order given by extractor: quality, res, fps, hdr:12, source, vcodec:vp9.2, channels, acodec, lang, proto
-    // [debug] Formats sorted by: hasvid, ie_pref, quality, res, fps, hdr:12(7), source, vcodec:vp9.2(10), channels, acodec, lang, proto, size, br, asr, vext, aext, hasaud, id     
+    // [debug] Formats sorted by: hasvid, ie_pref, quality, res, fps, hdr:12(7), source, vcodec:vp9.2(10), channels, acodec, lang, proto, size, br, asr, vext, aext, hasaud, id
     // [debug] Default format spec: bestvideo*+bestaudio/best
     // [info] -TVw_ndGyW4: Downloading 1 format(s): 248+251
 

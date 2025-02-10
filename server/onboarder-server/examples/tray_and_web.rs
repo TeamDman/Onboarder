@@ -1,18 +1,18 @@
-use hyper::{Body, Request, Response, Server};
 use hyper::service::{make_service_fn, service_fn};
+use hyper::{Body, Request, Response, Server};
 use std::convert::Infallible;
-use systray::Application;
-use tokio::sync::{Mutex, mpsc};
 use std::sync::Arc;
+use systray::Application;
+use tokio::sync::{mpsc, Mutex};
 
 async fn hello(_: Request<Body>) -> Result<Response<Body>, Infallible> {
     Ok(Response::new(Body::from("Hello World")))
 }
 
-async fn run_server(mut shutdown_rx: mpsc::Receiver<()>) -> Result<(), Box<dyn std::error::Error + Send>> {
-    let make_svc = make_service_fn(|_conn| async {
-        Ok::<_, Infallible>(service_fn(hello))
-    });
+async fn run_server(
+    mut shutdown_rx: mpsc::Receiver<()>,
+) -> Result<(), Box<dyn std::error::Error + Send>> {
+    let make_svc = make_service_fn(|_conn| async { Ok::<_, Infallible>(service_fn(hello)) });
 
     let addr = ([127, 0, 0, 1], 3001).into();
     let server = Server::bind(&addr).serve(make_svc);

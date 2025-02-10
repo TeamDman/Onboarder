@@ -1,4 +1,3 @@
-
 fn get_ytdlp_filename(url: &str) -> Result<String, String> {
     let output = std::process::Command::new("yt-dlp")
         .arg("--print")
