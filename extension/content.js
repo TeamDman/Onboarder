@@ -166,7 +166,14 @@ function addChips(videoArea) {
             action: async function() {
                 copyVideoDetailsToClipboard();
             }
-        }
+        },
+        {
+            text: "Subtitles",
+            description: "Download subtitles only",
+            action: async function () {
+                await downloadSubtitles();
+            },
+        },        
     ];
     actions.forEach((action) => {
         const chip = document.createElement("button");
@@ -445,6 +452,44 @@ function copyVideoDetailsToClipboard() {
     const uploaderName = document.querySelector("ytd-channel-name a").innerText;
     const str = `[${uploaderName} - ${videoTitle}](${videoUrl})`;
     navigator.clipboard.writeText(str);
+}
+
+async function downloadSubtitles() {
+    console.log(`${tag} Downloading subtitles`);
+    
+    // Optional: check if subtitles have already been downloaded
+    {
+        const videoId = document.querySelector("ytd-watch-metadata").getAttribute("video-id");
+        const resp = await fetch(`${serverUrl}/exists?search=${videoId}`);
+        // Adjust this check as needed; if the file exists, then skip downloading again
+        if (resp.status != 404) {
+            console.log(`${tag} Subtitles already downloaded, not downloading again`);
+            const text = await resp.text();
+            alert(`Subtitles already downloaded!\n${text}`);
+            return;
+        }
+    }
+
+    // Invoke the server endpoint for downloading subtitles.
+    const resp = await fetch(`${serverUrl}/download_subtitles`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/text",
+        },
+        // Pass the current URL (without extra parameters) as the body.
+        body: window.location.href.split("&")[0],
+    });
+    if (resp.status == 200) {
+        const fileId = await resp.text();
+        const content = getCurrentNoteContent() +
+            `\n${new Date().toString()} --- Subtitles download started for "${fileId}"`;
+        await save(content);
+        document.getElementById("custom_notes_area").value = content;
+    } else {
+        const content = getCurrentNoteContent() +
+            `\nFailed to download subtitles, status code: ${resp.status}`;
+        document.getElementById("custom_notes_area").value = content;
+    }
 }
 
 

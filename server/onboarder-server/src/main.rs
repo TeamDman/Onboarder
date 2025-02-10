@@ -104,7 +104,7 @@ async fn run_server<'a>(config: Config) -> Result<(), Box<dyn std::error::Error 
     let key = load_private_key("onboarder+1-key.pem")?;
 
     // Create a TCP listener via tokio.
-    let mut incoming = None;
+    let incoming;
     loop {
         info!("Attempting to listen on https://{}", addr);
         match AddrIncoming::bind(&addr) {
@@ -151,7 +151,7 @@ async fn run_server<'a>(config: Config) -> Result<(), Box<dyn std::error::Error 
         error!("Failed to bind to port");
         std::process::exit(1);
     };
-    info!("Successfully bound port");
+    info!("Successfully bound port, using {}", incoming.local_addr());
     if port_changed {
         info!("Successfully bound using new port, writing change to port.txt");
         tokio::fs::write("port.txt", addr.port().to_string()).await?;
@@ -643,6 +643,52 @@ async fn handle(
             let res: Response<Body> = Response::new(serde_json::to_string(&note).unwrap().into());
             Ok(res)
         }
+        (&Method::POST, "/download_subtitles") => {
+            // Read the URL from the request body
+            let whole_body = hyper::body::to_bytes(req.into_body()).await.unwrap();
+            let url = String::from_utf8(whole_body.to_vec()).unwrap();
+
+            // Get the download directory (using your dated_dir helper)
+            let dir = &state.lock().await.config.downloads_dir;
+            let dated_dir = match get_dated_dir(dir) {
+                Ok(it) => it,
+                Err(err) => {
+                    error!("Error getting dated dir: {}", err);
+                    return Ok(Response::builder()
+                        .status(StatusCode::INTERNAL_SERVER_ERROR)
+                        .body("Error getting dated dir".into())
+                        .unwrap());
+                }
+            };
+
+            // Construct and run the yt-dlp command to download just subtitles.
+            // This command uses: yt-dlp URL --write-auto-sub --skip-download --sub-lang en
+            let output = std::process::Command::new("pwsh")
+                .current_dir(&dated_dir)
+                .arg("-NoProfile")
+                .arg("-WorkingDirectory")
+                .arg("$(Get-Location)")
+                .arg("-c")
+                .arg(format!(
+                    "wt pwsh.exe -NoProfile -WorkingDirectory $(Get-Location) -c 'yt-dlp \"{}\" --write-auto-sub --skip-download --sub-lang en && Write-Host \"\"press any key to close\"\" && $Host.UI.RawUI.ReadKey(\"\"NoEcho,IncludeKeyDown\"\")'",
+                    url
+                ))
+                .output()
+                .expect("Failed to execute command");
+
+            // Return a response based on whether the command succeeded.
+            let res = if output.status.success() {
+                Response::new("Subtitles download started".into())
+            } else {
+                Response::builder()
+                    .status(StatusCode::INTERNAL_SERVER_ERROR)
+                    .body("Subtitles download failed".into())
+                    .unwrap()
+            };
+
+            Ok(res)
+        }
+
         _ => {
             let mut not_found = Response::default();
             *not_found.status_mut() = StatusCode::NOT_FOUND;
