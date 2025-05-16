@@ -26,3 +26,4 @@ cloud_terrastodon_core_user_input = { git = "https://github.com/aafc-cloud/Cloud
 color-eyre = "0.6.3"
 eyre = "0.6.12"
 strum = { version = "0.26.3", features = ["derive"] }
+reqwest = { version = "0.12.15", features = ["json"] }

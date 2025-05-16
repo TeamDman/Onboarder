@@ -703,7 +703,88 @@ async fn handle(
 
             Ok(res)
         }
+        (&Method::POST, "/start_whisperx_server") => {
+            let body = hyper::body::to_bytes(req.into_body()).await.unwrap();
+            let body = String::from_utf8(body.to_vec()).unwrap();
+            let (port, api_key) = body.split_once(":").unwrap();
+            info!("Starting whisperx server on port {}", port);
+            let whisperx_dir = PathBuf::from(r"D:\Repos\Onboarder\server\transcription");
+            assert!(whisperx_dir.exists());
+            let output = std::process::Command::new("pwsh")
+                .arg("-NoProfile")
+                .arg("-WorkingDirectory")
+                .arg(whisperx_dir)
+                .env("ONBOARDER_WHISPERX_PORT", port.to_string())
+                .env("ONBOARDER_WHISPERX_DIR", whisperx_dir)
+                .env("ONBOARDER_WHISPERX_OUTPUT_DIR", state.lock().await.config.downloads_dir)
+                .arg("-c")
+                .arg(r#"wt pwsh.exe -NoProfile -WorkingDirectory $(Get-Location) -c 'Write-Host "bruh $($Env:ONBOARDER_WHISPERX_PORT)"; pause'"#)
+                .output()
+                .expect("Failed to execute command");
 
+            let res = if output.status.success() {
+                info!("Subprocess invoked successfully");
+                Response::new("WhisperX server started".into())
+            } else {
+                error!(
+                    "Subprocess failed: {}",
+                    String::from_utf8_lossy(&output.stderr)
+                );
+                Response::builder()
+                    .status(StatusCode::INTERNAL_SERVER_ERROR)
+                    .body("Failed to start whisperx server".into())
+                    .unwrap()
+            };
+            Ok(res)
+        }
+        (&Method::POST, "/stop_whisperx_server") => {
+            let body = hyper::body::to_bytes(req.into_body()).await.unwrap();
+            let body = String::from_utf8(body.to_vec()).unwrap();
+            let (port, api_key) = body.split_once(":").unwrap();
+            info!("Stopping whisperx server on port {}", port);
+            // POST /stop to 127.0.0.1:$port/stop
+            let client = reqwest::ClientBuilder::new()
+                // .danger_accept_invalid_certs(true)
+                .default_headers(reqwest::header::HeaderMap::from_iter(
+                    vec![(
+                        reqwest::header::AUTHORIZATION,
+                        format!("Bearer {}", api_key).parse().unwrap(),
+                    )]
+                    .into_iter(),
+                ))
+                .build()
+                .unwrap();
+            let url = format!("https://127.0.0.1:{}/stop", port);
+            let res = client
+                .post(&url)
+                .send()
+                .await
+                .map_err(|e| {
+                    error!("Error stopping whisperx server: {}", e);
+                    Response::builder()
+                        .status(StatusCode::INTERNAL_SERVER_ERROR)
+                        .body("Failed to stop whisperx server".into())
+                        .unwrap()
+                })
+                .unwrap();
+            if res.status().is_success() {
+                info!("WhisperX server stopped successfully");
+                Ok(Response::new("WhisperX server stopped".into()))
+            } else {
+                error!("Failed to stop whisperx server: {}", res.status());
+                Ok(Response::builder()
+                    .status(StatusCode::INTERNAL_SERVER_ERROR)
+                    .body("Failed to stop whisperx server".into())
+                    .unwrap())
+            }
+        }
+        (&Method::POST, "/transcribe_with_whisperx") => {
+            let body = hyper::body::to_bytes(req.into_body()).await.unwrap();
+            let body = String::from_utf8(body.to_vec()).unwrap();
+            let (url, api_key) = body.split_once(":").unwrap();
+            info!("Transcribing with whisperx server on {}", url);
+            todo!()
+        }
         _ => {
             let mut not_found = Response::default();
             *not_found.status_mut() = StatusCode::NOT_FOUND;

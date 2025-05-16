@@ -4,7 +4,7 @@ const textAreaId = "custom_notes_area";
 
 let serverUrl = "https://localhost:5876/";
 chrome.storage.local.get("serverUrl", function (data) {
-    serverUrl = data.serverUrl || defaultServerUrl;
+    serverUrl = data.serverUrl;
     console.log(`${tag} serverUrl is ${serverUrl}`);
 });
 chrome.storage.onChanged.addListener(function (changes, namespace) {
@@ -12,6 +12,23 @@ chrome.storage.onChanged.addListener(function (changes, namespace) {
         if (key === "serverUrl") {
             serverUrl = changes[key].newValue.replace(/\/$/, "");
             console.log(`${tag} serverUrl is ${serverUrl}`);
+        } else if (key === "refresh") {
+            console.log(`${tag} refresh received, setting up`);
+            setup();
+        }
+    }
+});
+
+let whisperXServerURL = "https://localhost:5899/";
+chrome.storage.local.get("whisperXServerURL", function (data) {
+    whisperXServerURL = data.whisperXServerURL;
+    console.log(`${tag} whisperXServerURL is ${whisperXServerURL}`);
+});
+chrome.storage.onChanged.addListener(function (changes, namespace) {
+    for (let key in changes) {
+        if (key === "whisperXServerURL") {
+            whisperXServerURL = changes[key].newValue.replace(/\/$/, "");
+            console.log(`${tag} whisperXServerURL is ${whisperXServerURL}`);
         } else if (key === "refresh") {
             console.log(`${tag} refresh received, setting up`);
             setup();
@@ -154,7 +171,7 @@ function addChips(videoArea) {
             }
         },
         {
-            text: "📝 Transcript",
+            text: "📝 Transcribe (YouTube)",
             description: "Open transcript website",
             action: async function() {
                 openTranscriptInNewTab();
@@ -171,9 +188,30 @@ function addChips(videoArea) {
             text: "Subtitles",
             description: "Download subtitles only",
             action: async function () {
-                await downloadSubtitles();
+                await downloadSubtitlesFromYouTube();
             },
-        },        
+        },
+        {
+            text: "▶ Start Whisper-X",
+            description: "Launch Whisper-X server",
+            action: async function () {
+                startWhisperX();
+            },
+        },
+        {
+            text: "🛑 Stop Whisper-X",
+            description: "Turn off Whisper-X server",
+            action: async function () {
+                stopWhisperX();
+            },
+        },
+        {
+            text: "📝 Transcribe (Whisper-X)",
+            description: "Transcribe the video using Whisper-X",
+            action: async function () {
+                transcribeUsingWhisperX();
+            },
+        },
     ];
     actions.forEach((action) => {
         const chip = document.createElement("button");
@@ -454,7 +492,7 @@ function copyVideoDetailsToClipboard() {
     navigator.clipboard.writeText(str);
 }
 
-async function downloadSubtitles() {
+async function downloadSubtitlesFromYouTube() {
     console.log(`${tag} Downloading subtitles`);
     
     // Optional: check if subtitles have already been downloaded
@@ -490,6 +528,18 @@ async function downloadSubtitles() {
             `\nFailed to download subtitles, status code: ${resp.status}`;
         document.getElementById("custom_notes_area").value = content;
     }
+}
+
+async function startWhisperX() {
+
+}
+
+async function stopWhisperX() {
+
+}
+
+async function transcribeUsingWhisperX() {
+
 }
 
 

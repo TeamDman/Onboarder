@@ -1,0 +1,13 @@
+[project]
+name = "transcription"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "decord>=0.6.0",
+    "loguru>=0.7.3",
+    "torch>=2.5.1",
+    "torchaudio>=2.5.1",
+    "whisperx>=3.3.2",
+]
