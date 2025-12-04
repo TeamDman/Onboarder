@@ -1,5 +1,6 @@
 use chrono::Datelike;
 use chrono::Local;
+use chrono::Utc;
 use cloud_terrastodon_core_user_input::prelude::pick;
 use cloud_terrastodon_core_user_input::prelude::prompt_line;
 use cloud_terrastodon_core_user_input::prelude::FzfArgs;
@@ -32,9 +33,11 @@ use tokio::sync::Mutex;
 use tracing::debug;
 use tracing::error;
 use tracing::info;
+use tracing::warn;
 use tracing::level_filters::LevelFilter;
 use tracing::trace;
 use tracing_subscriber::EnvFilter;
+use x509_parser::prelude::parse_x509_certificate;
 
 #[derive(StructOpt)]
 struct Config {
@@ -115,8 +118,9 @@ async fn run_server<'a>(config: Config) -> Result<(), Box<dyn std::error::Error 
     let mut port_changed = false;
 
     // Ensure our certs are available before binding
-    let certs = load_certs("onboarder+1.pem")?;
-    let key = load_private_key("onboarder+1-key.pem")?;
+    let certs = load_certs("localhost.crt")?;
+    log_certificate_validity(&certs);
+    let key = load_private_key("localhost.key")?;
 
     // Create a TCP listener via tokio.
     let incoming;
@@ -331,6 +335,10 @@ async fn handle(
         (&Method::GET, "/healthcheck") => {
             let mut res = Response::default();
             *res.status_mut() = StatusCode::OK;
+            Ok(res)
+        }
+        (&Method::GET, "/") => {
+            let res: Response<Body> = Response::new("ahoy, world!".into());
             Ok(res)
         }
         (&Method::POST, "/set_note") => {
@@ -727,6 +735,57 @@ async fn handle(
     info!("Response: {}", status);
 
     Ok(res)
+}
+
+fn log_certificate_validity(certs: &[rustls::Certificate]) {
+    if certs.is_empty() {
+        warn!("No certificates loaded; skipping validity log");
+        return;
+    }
+
+    for (idx, cert) in certs.iter().enumerate() {
+        let (_, parsed) = match parse_x509_certificate(&cert.0) {
+            Ok(parsed) => parsed,
+            Err(err) => {
+                warn!("Unable to parse certificate #{idx}: {err}");
+                continue;
+            }
+        };
+
+        let validity = parsed.validity();
+        let valid_from_utc = match offset_to_chrono(validity.not_before.to_datetime()) {
+            Some(dt) => dt,
+            None => {
+                warn!("Unable to convert not_before for certificate #{idx}");
+                continue;
+            }
+        };
+        let valid_to_utc = match offset_to_chrono(validity.not_after.to_datetime()) {
+            Some(dt) => dt,
+            None => {
+                warn!("Unable to convert not_after for certificate #{idx}");
+                continue;
+            }
+        };
+
+        let valid_from_local = valid_from_utc.with_timezone(&Local);
+        let valid_to_local = valid_to_utc.with_timezone(&Local);
+        let days_remaining = valid_to_utc
+            .signed_duration_since(Utc::now())
+            .num_days();
+
+        info!(
+            "Certificate #{idx} valid from {} to {} ({} days remaining)",
+            valid_from_local,
+            valid_to_local,
+            days_remaining
+        );
+    }
+}
+
+fn offset_to_chrono(dt: time::OffsetDateTime) -> Option<chrono::DateTime<Utc>> {
+    chrono::NaiveDateTime::from_timestamp_opt(dt.unix_timestamp(), dt.nanosecond())
+        .map(|naive| chrono::DateTime::<Utc>::from_naive_utc_and_offset(naive, Utc))
 }
 
 // Load public certificate from file.

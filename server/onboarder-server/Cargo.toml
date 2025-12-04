@@ -1,6 +1,6 @@
 [package]
 name = "onboarder-server"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -26,3 +26,5 @@ cloud_terrastodon_core_user_input = { git = "https://github.com/aafc-cloud/Cloud
 color-eyre = "0.6.3"
 eyre = "0.6.12"
 strum = { version = "0.26.3", features = ["derive"] }
+x509-parser = "0.16"
+time = "0.3"

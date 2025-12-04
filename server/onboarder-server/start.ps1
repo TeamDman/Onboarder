@@ -1,5 +1,10 @@
-$releaseExe = "target/release/onboarder-server.exe"
-$debugExe = "target/debug/onboarder-server.exe"
+param(
+    [switch]$cargo
+)
+
+$ErrorActionPreference = "Stop"
+
+
 
 $port = 25569
 if (Test-Path "port.txt") {
@@ -17,14 +22,11 @@ $exeArgs = @(
     "--search-dirs", $searchDirs
 )
 
-if (Test-Path $releaseExe) {
-    & $releaseExe @exeArgs
-}
-elseif (Test-Path $debugExe) {
-    & $debugExe @exeArgs
-}
-else {
-    cargo run -- @exeArgs
+if ($cargo) {
+    $cargoArgs = @("run", "--") + $exeArgs
+    & cargo @cargoArgs
+} else {
+    & onboarder-server @exeArgs
 }
 
 Pause
