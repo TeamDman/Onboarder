@@ -454,10 +454,10 @@ function copyVideoDetailsToClipboard() {
     );
     const authorNames = authorElements
         .map((element) => element.innerText.trim())
-        .flatMap((name) => name.split(/\s*(?:\band\b|&)\s*/))
+        .flatMap((name) => name.split(/\s+and\s+|\s*&\s*/))
         .filter(Boolean);
-    const authors = authorNames.length ? authorNames : ["Unknown author"];
-    const str = `[${authors.join(", ")} - ${videoTitle}](${videoUrl})`;
+    const authorList = authorNames.length ? authorNames : ["Unknown author"];
+    const str = `[${authorList.join(", ")} - ${videoTitle}](${videoUrl})`;
     navigator.clipboard.writeText(str);
 }
 
