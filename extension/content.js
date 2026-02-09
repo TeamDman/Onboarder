@@ -453,9 +453,8 @@ function copyVideoDetailsToClipboard() {
         document.querySelectorAll("#attributed-channel-name a, ytd-channel-name a")
     );
     const uploaderNames = authorElements
-        .map((element) => element.innerText)
-        .flatMap((name) => name.split(/\s+and\s+|\s*&\s*/))
-        .map((name) => name.trim())
+        .map((element) => element.innerText.trim())
+        .flatMap((name) => name.split(/\s*(?:\band\b|&)\s*/))
         .filter(Boolean);
     const str = `[${uploaderNames.join(", ")} - ${videoTitle}](${videoUrl})`;
     navigator.clipboard.writeText(str);
