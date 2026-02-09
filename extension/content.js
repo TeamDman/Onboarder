@@ -454,7 +454,7 @@ function copyVideoDetailsToClipboard() {
     );
     const authorNames = authorElements
         .map((element) => element.innerText.trim())
-        .flatMap((name) => name.split(/\s+and\s+|\s*&\s*/))
+        .flatMap((name) => name.split(/\s+(?:\band\b|&)\s+/))
         .filter(Boolean);
     const authorList = authorNames.length ? authorNames : ["Unknown author"];
     const str = `[${authorList.join(", ")} - ${videoTitle}](${videoUrl})`;
