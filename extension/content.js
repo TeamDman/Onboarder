@@ -453,8 +453,8 @@ function copyVideoDetailsToClipboard() {
         document.querySelectorAll("#attributed-channel-name a, ytd-channel-name a")
     );
     const authorNames = authorElements
-        .map((element) => element.innerText.trim())
-        .flatMap((name) => name.split(/\s+(?:\band\b|&)\s+/))
+        .map((element) => element.innerText.trim().replace(/\s+/g, " "))
+        .flatMap((name) => name.split(/\s*(?:\band\b|&)\s*/))
         .filter(Boolean);
     const authorList = authorNames.length ? authorNames : ["Unknown author"];
     const str = `[${authorList.join(", ")} - ${videoTitle}](${videoUrl})`;
