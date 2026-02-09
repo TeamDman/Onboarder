@@ -449,8 +449,13 @@ function copyVideoDetailsToClipboard() {
     // remove query params
     const videoId = document.querySelector("ytd-watch-metadata").getAttribute("video-id");
     const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
-    const uploaderName = document.querySelector("ytd-channel-name a").innerText;
-    const str = `[${uploaderName} - ${videoTitle}](${videoUrl})`;
+    const uploaderNames = Array.from(
+        document.querySelectorAll("#attributed-channel-name a, ytd-channel-name a")
+    )
+        .flatMap((element) => element.innerText.split(/\s+and\s+|,\s*|\s*&\s*/))
+        .map((name) => name.trim())
+        .filter(Boolean);
+    const str = `[${uploaderNames.join(", ")} - ${videoTitle}](${videoUrl})`;
     navigator.clipboard.writeText(str);
 }
 
