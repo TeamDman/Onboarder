@@ -435,7 +435,7 @@ function openTranscriptInNewTab() {
     var videoId = currentUrl.searchParams.get('v');
 
     if (videoId) {
-        var transcriptUrl = 'https://youtubetranscript.com/?v=' + videoId;
+        var transcriptUrl = 'https://youtubetotranscript.com/transcript?v=' + videoId;
         
         // Open the transcript URL in a new tab
         window.open(transcriptUrl, '_blank');
