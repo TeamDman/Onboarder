@@ -451,7 +451,7 @@ function copyVideoDetailsToClipboard() {
     const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
     const authorElements = Array.from(
         document.querySelectorAll("#attributed-channel-name a, ytd-channel-name a")
-    );
+    ).filter((element) => !element.closest("#playlist-items"));
     const authorNames = authorElements
         .map((element) => element.innerText.trim().replace(/\s+/g, " "))
         .flatMap((name) => name.split(/\s*(?:\band\b|&)\s*/))
